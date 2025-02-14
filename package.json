@@ -1,28 +1,31 @@
 {
   "name": "nuxt-app",
-  "private": true,
   "type": "module",
+  "private": true,
+  "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab",
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "lint": "eslint --ext .js,.ts,.vue ."
+    "lint": "eslint . --quiet",
+    "lint:fix": "eslint . --fix --quiet"
   },
   "dependencies": {
-    "@antfu/eslint-config": "^4.2.0",
     "@vueuse/core": "^12.6.1",
     "naive-ui": "^2.41.0",
     "nuxt": "^3.15.4",
-    "nuxtjs-naive-ui": "1.0.2",
     "vue": "latest",
     "vue-router": "latest"
   },
   "devDependencies": {
-    "@nuxtjs/eslint-config-typescript": "^12.1.0",
+    "@antfu/eslint-config": "^4.2.0",
+    "@bg-dev/nuxt-naiveui": "2.0.0-rc.3",
+    "@unocss/eslint-plugin": "^65.4.3",
+    "@unocss/nuxt": "^65.4.3",
     "eslint": "^9.20.1",
-    "eslint-plugin-vue": "^9.32.0"
-  },
-  "packageManager": "pnpm@9.14.4+sha512.c8180b3fbe4e4bca02c94234717896b5529740a6cbadf19fa78254270403ea2f27d4e1d46a08a0f56c89b63dc8ebfd3ee53326da720273794e6200fcf0d184ab"
+    "eslint-plugin-format": "^1.0.1",
+    "unocss": "^65.4.3"
+  }
 }

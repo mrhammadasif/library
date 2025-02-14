@@ -2,11 +2,8 @@
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
-  modules: ['nuxtjs-naive-ui'],
-  buildModules: [
-    '@nuxtjs/eslint-module'
+  modules: [
+    '@bg-dev/nuxt-naiveui',
+    '@unocss/nuxt',
   ],
-  eslint: {
-    fix: true
-  }
 })
