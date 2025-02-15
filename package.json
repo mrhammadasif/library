@@ -13,19 +13,31 @@
     "lint:fix": "eslint . --fix --quiet"
   },
   "dependencies": {
-    "@vueuse/core": "^12.6.1",
+    "@prisma/client": "^6.3.1",
+    "@prisma/nuxt": "^0.3.0",
+    "@scalar/nuxt": "0.2.196",
+    "lodash-es": "^4.17.21",
+    "luxon": "^3.5.0",
     "naive-ui": "^2.41.0",
     "nuxt": "^3.15.4",
+    "pinia": "^3.0.1",
     "vue": "latest",
-    "vue-router": "latest"
+    "vue-router": "latest",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.2.0",
     "@bg-dev/nuxt-naiveui": "2.0.0-rc.3",
+    "@types/lodash-es": "^4.17.12",
+    "@types/luxon": "^3.4.2",
+    "@types/validator": "^13.12.2",
     "@unocss/eslint-plugin": "^65.4.3",
     "@unocss/nuxt": "^65.4.3",
+    "@vueuse/core": "^12.6.1",
+    "@vueuse/nuxt": "^12.6.1",
     "eslint": "^9.20.1",
     "eslint-plugin-format": "^1.0.1",
-    "unocss": "^65.4.3"
+    "unocss": "^65.4.3",
+    "validator": "^13.12.0"
   }
 }

@@ -1,5 +1,9 @@
+<script lang="ts" setup>
+import { NaiveConfig } from '#components'
+</script>
+
 <template>
-  <NConfigProvider inline-theme-disabled>
+  <NaiveConfig>
     <NMessageProvider>
       <NNotificationProvider>
         <NLoadingBarProvider>
@@ -9,5 +13,9 @@
         </NLoadingBarProvider>
       </NNotificationProvider>
     </NMessageProvider>
-  </NConfigProvider>
+  </NaiveConfig>
 </template>
+
+<style>
+
+</style>

@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Shelf {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  color String
+  books Book[]
+}
+
+model Book {
+  id        Int       @id @default(autoincrement())
+  isbn      String?
+  title     String
+  author    String
+  thumbnail String?
+  shelf     Shelf     @relation(fields: [shelfId], references: [id])
+  shelfId   Int
+  lentTo    String?
+  lentDate  DateTime?
+}
