@@ -1,0 +1,83 @@
+{
+  "name": "home-library",
+  "main": "expo-router/entry",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "test:ci": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:db": "bash scripts/test-db.sh",
+    "gen:types": "bash scripts/gen-types.sh",
+    "check:fn": "deno check supabase/functions/*/index.ts",
+    "build:preview": "rm -rf \"${TMPDIR:-/tmp}\"/metro-* \"${TMPDIR:-/tmp}\"/haste-map-* && npx eas-cli@latest build -p android --profile preview --local --output ./library-preview.apk && bash scripts/check-apk.sh library-preview.apk",
+    "check:apk": "bash scripts/check-apk.sh"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "9.1.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tanstack/react-query": "^5.104.0",
+    "expo": "~57.0.25",
+    "expo-build-properties": "~57.0.22",
+    "expo-camera": "~57.0.6",
+    "expo-clipboard": "~57.0.2",
+    "expo-constants": "~57.0.19",
+    "expo-crypto": "~57.0.3",
+    "expo-dev-client": "~57.0.19",
+    "expo-font": "~57.0.4",
+    "expo-haptics": "~57.0.3",
+    "expo-image": "~57.0.5",
+    "expo-image-manipulator": "~57.0.20",
+    "expo-image-picker": "~57.0.20",
+    "expo-linear-gradient": "~57.0.2",
+    "expo-linking": "~57.0.11",
+    "expo-router": "~57.0.23",
+    "expo-sharing": "~57.0.22",
+    "expo-splash-screen": "~57.0.9",
+    "expo-status-bar": "~57.0.1",
+    "expo-system-ui": "~57.0.4",
+    "expo-web-browser": "~57.0.3",
+    "lightningcss": "1.30.1",
+    "luxon": "^3.7.2",
+    "nativewind": "5.0.0-rc.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-css": "3.1.0-rc.0",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-gifted-charts": "^1.4.78",
+    "react-native-image-colors": "^2.6.0",
+    "react-native-reanimated": "4.5.1",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "react-native-svg": "15.15.4",
+    "react-native-web": "~0.21.0",
+    "react-native-worklets": "0.10.1",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "@types/luxon": "^3.7.5",
+    "@types/node": "^22.20.4",
+    "@types/react": "~19.2.2",
+    "@vitest/coverage-v8": "^5.0.2",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.2",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.2"
+  },
+  "overrides": {
+    "@expo/metro-config": {
+      "lightningcss": "1.30.1"
+    },
+    "react-native-css": {
+      "lightningcss": "1.30.1"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Home Library",
+    "slug": "home-library",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "homelibrary",
+    "userInterfaceStyle": "light",
+    "platforms": [
+      "android",
+      "ios"
+    ],
+    "android": {
+      "package": "com.nitroxis.homelibrary",
+      "adaptiveIcon": {
+        "backgroundColor": "#2F5D50",
+        "foregroundImage": "./assets/images/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "ios": {
+      "bundleIdentifier": "com.nitroxis.homelibrary"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F7F4EE",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 96
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Home Library uses the camera to scan book barcodes and photograph covers.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Home Library lets you pick a cover photo from your gallery.",
+          "cameraPermission": "Home Library uses the camera to photograph book covers."
+        }
+      ],
+      "expo-sharing",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "buildArchs": [
+              "arm64-v8a"
+            ],
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "useLegacyPackaging": true
+          }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

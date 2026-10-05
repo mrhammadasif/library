@@ -1,0 +1,13 @@
+{
+  "ISBN:9780441172719": {
+    "title": "Dune",
+    "authors": [{ "name": "Frank Herbert" }],
+    "publishers": [{ "name": "Ace Books" }],
+    "publish_date": "August 2, 2005",
+    "number_of_pages": 528,
+    "subjects": [{ "name": "Science fiction" }, { "name": "Dune (Imaginary place) -- Fiction -- Very long subject heading that exceeds limits" }, { "name": "Deserts" }],
+    "cover": { "small": "https://covers.openlibrary.org/b/id/1-S.jpg", "large": "https://covers.openlibrary.org/b/id/1-L.jpg" },
+    "identifiers": { "isbn_13": ["9780441172719"], "isbn_10": ["0441172717"] },
+    "languages": [{ "key": "/languages/eng" }]
+  }
+}

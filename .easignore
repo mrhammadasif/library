@@ -1,0 +1,10 @@
+# Used by EAS instead of .gitignore. Builds run locally (eas build --local), so the gitignored .env.local is
+# deliberately NOT excluded here. Don't run cloud builds with this file.
+node_modules/
+.expo/
+dist/
+web-build/
+*.apk
+*.aab
+test-results/
+.claude/

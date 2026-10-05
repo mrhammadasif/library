@@ -1,0 +1,32 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+
+@media android {
+  :root {
+    --font-mono: monospace;
+    --font-sans: normal;
+  }
+}
+
+/* Design tokens — warm paper canvas, walnut hero, library-green accent. Mirrored in src/constants/Colors.ts. */
+@layer theme {
+  @theme {
+    --color-canvas: #f7f4ee;
+    --color-card: #ffffff;
+    --color-line: #ebe5da;
+    --color-walnut: #2b211a;
+    --color-walnut-soft: #3d3027;
+    --color-primary: #2f5d50;
+    --color-primary-soft: #e3eee9;
+    --color-ink: #1f1a14;
+    --color-muted: #6f665c;
+    --color-faint: #a39a8f;
+    --color-positive: #2e7d4f;
+    --color-positive-soft: #e5f3ea;
+    --color-negative: #c2412d;
+    --color-negative-soft: #fbe9e5;
+    --color-warn: #c98a12;
+    --color-warn-soft: #fbf1dc;
+  }
+}
