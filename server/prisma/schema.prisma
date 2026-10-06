@@ -1,3 +1,6 @@
+// Home Library schema. Ported from the original Supabase migrations: same tables and snake_case columns.
+// Multi-tenant: every tenant table carries library_id, and composite FKs (id, library_id) stop rows in one library from
+// referencing rows in another. CHECK constraints and pg_trgm live in hand-written SQL inside the first migration.
 
 generator client {
   provider        = "prisma-client"
@@ -10,85 +13,429 @@ datasource db {
   provider = "postgresql"
 }
 
-model SpikeBook {
-  id     String      @id @default(uuid()) @db.Uuid
-  title  String
-  status String      @default("on_shelf")
-  loans  SpikeLoan[]
+// ─── Enums ──────────────────────────────────────────────────────────────────
 
-  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin)
-  @@map("spike_books")
+enum LibraryRole {
+  owner
+  member
+
+  @@map("library_role")
 }
 
-model SpikeLoan {
-  id         String    @id @default(uuid()) @db.Uuid
-  bookId     String    @map("book_id") @db.Uuid
-  returnedAt DateTime? @map("returned_at")
-  book       SpikeBook @relation(fields: [bookId], references: [id], onDelete: Cascade)
+enum LibraryPermission {
+  booksAdd      @map("books.add")
+  booksEdit     @map("books.edit")
+  booksMove     @map("books.move")
+  loansManage   @map("loans.manage")
+  booksArchive  @map("books.archive")
+  booksDelete   @map("books.delete")
+  shelvesManage @map("shelves.manage")
+  auditsRun     @map("audits.run")
+  membersManage @map("members.manage")
+  aiManage      @map("ai.manage")
 
-  @@unique([bookId], where: raw("returned_at IS NULL"), map: "spike_one_open_loan")
-  @@map("spike_loans")
+  @@map("library_permission")
 }
+
+enum BookStatus {
+  on_shelf
+  borrowed
+  missing
+  archived
+
+  @@map("book_status")
+}
+
+enum AuditMode {
+  random
+  shelf
+
+  @@map("audit_mode")
+}
+
+enum AuditResult {
+  pending
+  found
+  missing
+  misplaced
+  unexpected
+
+  @@map("audit_result")
+}
+
+enum AiProvider {
+  openai
+  gemini
+  openai_compatible
+
+  @@map("ai_provider")
+}
+
+enum ColorName {
+  red
+  orange
+  yellow
+  green
+  blue
+  purple
+  pink
+  brown
+  black
+  white
+  grey
+  multi
+
+  @@map("color_name")
+}
+
+enum BookEventType {
+  created
+  moved
+  lent
+  returned
+  archived
+  restored
+  audited
+  marked_missing
+
+  @@map("book_event_type")
+}
+
+// ─── Better Auth (field names are what the adapter expects; columns are snake_case) ─
 
 model User {
-  id            String    @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Display name shown to fellow library members.
   name          String
-  email         String
-  emailVerified Boolean   @default(false)
+  email         String    @unique
+  emailVerified Boolean   @default(false) @map("email_verified")
   image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
   sessions      Session[]
   accounts      Account[]
+  passkeys      Passkey[]
+  memberships   LibraryMember[]
 
-  @@unique([email])
   @@map("user")
 }
 
 model Session {
-  id        String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String   @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  userId    String   @map("user_id") @db.Uuid
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([token])
   @@index([userId])
   @@map("session")
 }
 
 model Account {
-  id                    String    @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
-  accountId             String
-  providerId            String
-  userId                String    @db.Uuid
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  userId                String    @map("user_id") @db.Uuid
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  accessTokenExpiresAt  DateTime?
-  refreshTokenExpiresAt DateTime?
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
   scope                 String?
   password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   @@index([userId])
   @@map("account")
 }
 
 model Verification {
-  id         String   @id @default(dbgenerated("pg_catalog.gen_random_uuid()")) @db.Uuid
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   identifier String
   value      String
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@index([identifier])
   @@map("verification")
+}
+
+/// Better Auth database-backed rate limiting.
+model RateLimit {
+  id          String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String @unique
+  count       Int
+  lastRequest BigInt @map("last_request")
+
+  @@map("rate_limit")
+}
+
+/// Phase 2 (passkeys); created now so enabling the plugin needs no data migration.
+model Passkey {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name         String?
+  publicKey    String    @map("public_key")
+  userId       String    @map("user_id") @db.Uuid
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  credentialID String    @map("credential_id")
+  counter      Int
+  deviceType   String    @map("device_type")
+  backedUp     Boolean   @map("backed_up")
+  transports   String?
+  aaguid       String?
+  createdAt    DateTime? @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([credentialID])
+  @@map("passkey")
+}
+
+// ─── Libraries & membership ─────────────────────────────────────────────────
+
+model Library {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  createdBy      String?     @map("created_by") @db.Uuid
+  enrichProvider AiProvider? @map("enrich_provider")
+  visionProvider AiProvider? @map("vision_provider")
+  /// Home Ollama allowed for this library; only the server admin can set it.
+  homeAiAllowed  Boolean     @default(false) @map("home_ai_allowed")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  members     LibraryMember[]
+  invites     LibraryInvite[]
+  racks       Rack[]
+  shelves     Shelf[]
+  books       Book[]
+  loans       Loan[]
+  events      BookEvent[]
+  audits      Audit[]
+  auditItems  AuditItem[]
+  aiProviders LibraryAiProvider[]
+
+  @@map("libraries")
+}
+
+model LibraryMember {
+  libraryId   String              @map("library_id") @db.Uuid
+  userId      String              @map("user_id") @db.Uuid
+  role        LibraryRole         @default(member)
+  /// Ignored for owners, who implicitly hold every permission.
+  permissions LibraryPermission[] @default([])
+  createdAt   DateTime            @default(now()) @map("created_at")
+  library     Library             @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([libraryId, userId])
+  @@index([userId])
+  @@map("library_members")
+}
+
+model LibraryInvite {
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId   String              @map("library_id") @db.Uuid
+  code        String              @unique
+  permissions LibraryPermission[] @default([])
+  expiresAt   DateTime            @map("expires_at")
+  maxUses     Int                 @default(1) @map("max_uses")
+  uses        Int                 @default(0)
+  createdBy   String?             @map("created_by") @db.Uuid
+  createdAt   DateTime            @default(now()) @map("created_at")
+  library     Library             @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  @@index([libraryId])
+  @@map("library_invites")
+}
+
+// ─── Racks (bookcases) & shelves ────────────────────────────────────────────
+
+model Rack {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId String   @map("library_id") @db.Uuid
+  name      String
+  notes     String?
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at")
+  library   Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  shelves   Shelf[]
+
+  @@unique([id, libraryId])
+  @@index([libraryId, position])
+  @@map("racks")
+}
+
+model Shelf {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId String   @map("library_id") @db.Uuid
+  rackId    String   @map("rack_id") @db.Uuid
+  name      String
+  notes     String?
+  position  Int
+  createdAt DateTime @default(now()) @map("created_at")
+  library   Library  @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  rack      Rack     @relation(fields: [rackId, libraryId], references: [id, libraryId], onDelete: Cascade)
+  books     Book[]
+
+  @@unique([id, libraryId])
+  @@index([rackId, position])
+  @@map("shelves")
+}
+
+// ─── Books ──────────────────────────────────────────────────────────────────
+
+/// One row per physical copy. shelf_id is the home shelf: kept while borrowed or missing, cleared when archived.
+model Book {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId     String     @map("library_id") @db.Uuid
+  isbn13        String?
+  isbn10        String?
+  title         String
+  subtitle      String?
+  authors       String[]   @default([])
+  /// authors joined by spaces; maintained by BooksService for trigram search.
+  authorsText   String     @default("") @map("authors_text")
+  publisher     String?
+  publishedYear Int?       @map("published_year")
+  pages         Int?
+  language      String?
+  description   String?
+  categories    String[]   @default([])
+  tags          String[]   @default([])
+  coverPath     String?    @map("cover_path")
+  coverUrl      String?    @map("cover_url")
+  dominantColor String?    @map("dominant_color")
+  colorName     ColorName? @map("color_name")
+  condition     String?
+  notes         String?
+  status        BookStatus @default(on_shelf)
+  shelfId       String?    @map("shelf_id") @db.Uuid
+  archivedAt    DateTime?  @map("archived_at")
+  archiveReason String?    @map("archive_reason")
+  donatedTo     String?    @map("donated_to")
+  lastSeenAt    DateTime?  @map("last_seen_at")
+  addedBy       String?    @map("added_by") @db.Uuid
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+  library       Library    @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  shelf         Shelf?     @relation(fields: [shelfId, libraryId], references: [id, libraryId], onDelete: Restrict)
+  loans         Loan[]
+  events        BookEvent[]
+  auditItems    AuditItem[]
+
+  @@unique([id, libraryId])
+  @@index([libraryId, status])
+  @@index([shelfId])
+  @@index([libraryId, isbn13])
+  @@index([tags], type: Gin)
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "books_title_trgm_idx")
+  @@index([authorsText(ops: raw("gin_trgm_ops"))], type: Gin, map: "books_authors_trgm_idx")
+  @@map("books")
+}
+
+model Loan {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId       String    @map("library_id") @db.Uuid
+  bookId          String    @map("book_id") @db.Uuid
+  /// SET NULL on account deletion; borrower_name keeps the history readable.
+  borrowerUserId  String?   @map("borrower_user_id") @db.Uuid
+  borrowerName    String    @map("borrower_name")
+  borrowerContact String?   @map("borrower_contact")
+  notes           String?
+  lentAt          DateTime  @default(now()) @map("lent_at")
+  dueAt           DateTime? @map("due_at")
+  returnedAt      DateTime? @map("returned_at")
+  returnShelfId   String?   @map("return_shelf_id") @db.Uuid
+  lentBy          String?   @map("lent_by") @db.Uuid
+  returnedBy      String?   @map("returned_by") @db.Uuid
+  library         Library   @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  book            Book      @relation(fields: [bookId, libraryId], references: [id, libraryId], onDelete: Cascade)
+
+  @@unique([bookId], where: raw("returned_at IS NULL"), map: "loans_one_open_per_book")
+  @@index([libraryId], where: raw("returned_at IS NULL"), map: "loans_library_open_idx")
+  @@map("loans")
+}
+
+model BookEvent {
+  id          BigInt        @id @default(autoincrement())
+  libraryId   String        @map("library_id") @db.Uuid
+  bookId      String        @map("book_id") @db.Uuid
+  type        BookEventType
+  fromShelfId String?       @map("from_shelf_id") @db.Uuid
+  toShelfId   String?       @map("to_shelf_id") @db.Uuid
+  payload     Json          @default("{}")
+  actor       String?       @db.Uuid
+  at          DateTime      @default(now())
+  library     Library       @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  book        Book          @relation(fields: [bookId, libraryId], references: [id, libraryId], onDelete: Cascade)
+
+  @@index([bookId, at(sort: Desc)])
+  @@index([libraryId, at(sort: Desc)])
+  @@map("book_events")
+}
+
+// ─── Audits ("book checks") ─────────────────────────────────────────────────
+
+model Audit {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId   String      @map("library_id") @db.Uuid
+  mode        AuditMode
+  shelfId     String?     @map("shelf_id") @db.Uuid
+  sampleSize  Int?        @map("sample_size")
+  startedBy   String?     @map("started_by") @db.Uuid
+  startedAt   DateTime    @default(now()) @map("started_at")
+  completedAt DateTime?   @map("completed_at")
+  library     Library     @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  items       AuditItem[]
+
+  @@unique([id, libraryId])
+  @@index([libraryId, startedAt(sort: Desc)])
+  @@map("audits")
+}
+
+model AuditItem {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId       String      @map("library_id") @db.Uuid
+  auditId         String      @map("audit_id") @db.Uuid
+  bookId          String?     @map("book_id") @db.Uuid
+  expectedShelfId String?     @map("expected_shelf_id") @db.Uuid
+  foundShelfId    String?     @map("found_shelf_id") @db.Uuid
+  scannedIsbn     String?     @map("scanned_isbn")
+  result          AuditResult @default(pending)
+  checkedAt       DateTime?   @map("checked_at")
+  checkedBy       String?     @map("checked_by") @db.Uuid
+  library         Library     @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+  audit           Audit       @relation(fields: [auditId, libraryId], references: [id, libraryId], onDelete: Cascade)
+  book            Book?       @relation(fields: [bookId, libraryId], references: [id, libraryId], onDelete: Cascade)
+
+  @@unique([auditId, bookId], where: raw("book_id IS NOT NULL"), map: "audit_items_book_once")
+  @@index([auditId])
+  @@map("audit_items")
+}
+
+// ─── AI providers (keys encrypted with AES-256-GCM; never returned to clients) ─
+
+model LibraryAiProvider {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  libraryId      String     @map("library_id") @db.Uuid
+  provider       AiProvider
+  model          String
+  baseUrl        String?    @map("base_url")
+  keyCiphertext  String     @map("key_ciphertext")
+  keyIv          String     @map("key_iv")
+  keyTag         String     @map("key_tag")
+  keyVersion     Int        @default(1) @map("key_version")
+  supportsVision Boolean    @default(false) @map("supports_vision")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+  library        Library    @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  @@unique([libraryId, provider])
+  @@map("library_ai_providers")
 }

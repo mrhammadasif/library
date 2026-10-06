@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics'
 import { useRef, useState } from 'react'
 import { Text, View } from 'react-native'
 import { Button } from '~/components/Button'
-import { normalizeIsbn } from '~fn/isbn'
+import { normalizeIsbn } from '~shared/isbn'
 
 interface IBarcodeScannerProps {
   /** Called once per distinct valid ISBN; the same code is ignored for a few seconds. */

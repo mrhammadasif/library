@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { baseUrlFor, buildEnrichUser, extractJson, parseEnrichment, parseIdentification } from '../supabase/functions/_shared/ai'
-import { emptyDraft } from '../supabase/functions/_shared/metadata'
+import { baseUrlFor, buildEnrichUser, extractJson, parseEnrichment, parseIdentification } from '../shared/ai'
+import { emptyDraft } from '../shared/metadata'
 
 describe('ai', () => {
   it('extracts JSON from replies with think blocks and code fences', () => {

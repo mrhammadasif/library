@@ -9,7 +9,7 @@ import {
   parseYear,
   toLanguageCode,
   upgradeGoogleCover,
-} from '../supabase/functions/_shared/metadata'
+} from '../shared/metadata'
 import google from './fixtures/google-volumes.json'
 import openLibrary from './fixtures/openlibrary-data.json'
 

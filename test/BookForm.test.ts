@@ -1,6 +1,6 @@
 import type { IBookFields } from '~/models/IBook'
 import { describe, expect, it } from 'vitest'
-import { emptyDraft } from '../supabase/functions/_shared/metadata'
+import { emptyDraft } from '../shared/metadata'
 import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft, splitList } from '~/utils/BookForm'
 
 const enrichment = { categories: ['Science Fiction'], tags: ['desert', 'Politics'], description: 'AI summary', language: 'en' }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyDraft } from '../supabase/functions/_shared/metadata'
+import { emptyDraft } from '../shared/metadata'
 import { setPendingDraft, takePendingDraft } from '~/utils/DraftStore'
 
 describe('draftStore', () => {

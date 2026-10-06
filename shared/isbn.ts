@@ -1,4 +1,4 @@
-// ISBN helpers shared by the edge functions and the app (imported there as ~fn/isbn). Pure; no imports.
+// ISBN helpers shared by the API and the app (imported there as ~shared/isbn). Pure; no imports.
 
 /** Keeps digits and a trailing X: "978-0-441-17271-9" → "9780441172719". */
 export function cleanIsbn(raw: string): string {

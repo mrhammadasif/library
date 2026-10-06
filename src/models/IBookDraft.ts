@@ -1,5 +1,5 @@
 // The lookup/enrichment shapes returned by the edge functions (supabase/functions/_shared).
-export type { IBookDraft } from '~fn/metadata'
+export type { IBookDraft } from '~shared/metadata'
 
 export interface IEnrichment {
   categories: string[]

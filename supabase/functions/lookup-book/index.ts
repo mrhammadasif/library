@@ -2,8 +2,8 @@
 // ISBN: Open Library + Google Books in parallel, merged. Title/author: free-text candidates. No AI here, so the
 // review form opens fast; the app calls enrich-book afterwards.
 import { HttpError, json, memberContext, serve } from '../_shared/http.ts'
-import { normalizeIsbn } from '../_shared/isbn.ts'
-import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../_shared/metadata.ts'
+import { normalizeIsbn } from '../../../shared/isbn.ts'
+import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata.ts'
 
 const GOOGLE_KEY = Deno.env.get('GOOGLE_BOOKS_API_KEY') ?? undefined
 

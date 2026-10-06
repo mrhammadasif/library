@@ -6,7 +6,7 @@ module.exports = defineConfig([
   expoConfig,
   {
     // Deno edge functions are checked with `deno check` instead (npm run check:fn).
-    ignores: ['dist/*', 'supabase/functions/**'],
+    ignores: ['dist/*', 'supabase/functions/**', 'server/**'],
   },
   {
     rules: {

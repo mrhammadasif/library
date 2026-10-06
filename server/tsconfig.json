@@ -17,11 +17,14 @@
     "outDir": "./dist",
     "types": [
       "node"
-    ]
+    ],
+    "rootDir": "..",
+    "rewriteRelativeImportExtensions": true
   },
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
-    "prisma.config.ts"
+    "prisma.config.ts",
+    "../shared/**/*.ts"
   ]
 }

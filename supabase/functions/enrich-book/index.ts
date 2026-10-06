@@ -1,7 +1,7 @@
 // POST { libraryId, draft } → { enrichment, provider } using the library's enrich provider (e.g. Ollama via
 // OmniRoute). 409 ai_not_configured when the library has none.
-import type { IBookDraft } from '../_shared/metadata.ts'
-import { buildEnrichUser, chatJson, ENRICH_SCHEMA, ENRICH_SYSTEM, parseEnrichment } from '../_shared/ai.ts'
+import type { IBookDraft } from '../../../shared/metadata.ts'
+import { buildEnrichUser, chatJson, ENRICH_SCHEMA, ENRICH_SYSTEM, parseEnrichment } from '../../../shared/ai.ts'
 import { aiConfig, HttpError, json, memberContext, serve } from '../_shared/http.ts'
 
 serve(async (req, body) => {

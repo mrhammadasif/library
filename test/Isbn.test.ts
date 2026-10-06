@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cleanIsbn, isbn10To13, isbn13To10, isValidIsbn10, isValidIsbn13, normalizeIsbn } from '../supabase/functions/_shared/isbn'
+import { cleanIsbn, isbn10To13, isbn13To10, isValidIsbn10, isValidIsbn13, normalizeIsbn } from '../shared/isbn'
 
 describe('isbn', () => {
   it('cleans dashes and spaces', () => {

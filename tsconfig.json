@@ -9,10 +9,11 @@
       "~assets/*": [
         "./assets/*"
       ],
-      "~fn/*": [
-        "./supabase/functions/_shared/*"
+      "~shared/*": [
+        "./shared/*"
       ]
-    }
+    },
+    "allowImportingTsExtensions": true
   },
   "include": [
     "**/*.ts",
@@ -23,6 +24,7 @@
   ],
   "exclude": [
     "supabase/functions/**",
+    "server/**",
     "node_modules"
   ]
 }

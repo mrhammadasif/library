@@ -1,9 +1,9 @@
 // POST { libraryId, imageBase64 } → { identification, candidates } using the library's vision provider
 // (OpenAI / Gemini). 409 ai_not_configured when none is set up, so the app can fall back to ISBN scanning.
-import { chatJson, IDENTIFY_SCHEMA, IDENTIFY_SYSTEM, parseIdentification } from '../_shared/ai.ts'
+import { chatJson, IDENTIFY_SCHEMA, IDENTIFY_SYSTEM, parseIdentification } from '../../../shared/ai.ts'
 import { aiConfig, HttpError, json, memberContext, serve } from '../_shared/http.ts'
-import { normalizeIsbn } from '../_shared/isbn.ts'
-import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../_shared/metadata.ts'
+import { normalizeIsbn } from '../../../shared/isbn.ts'
+import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata.ts'
 
 const GOOGLE_KEY = Deno.env.get('GOOGLE_BOOKS_API_KEY') ?? undefined
 // ~768px JPEG from the app is ~100–200 KB of base64; reject anything absurd.

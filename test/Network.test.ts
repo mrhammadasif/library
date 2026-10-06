@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { chatJson } from '../supabase/functions/_shared/ai'
-import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, searchCandidates } from '../supabase/functions/_shared/metadata'
+import { chatJson } from '../shared/ai'
+import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, searchCandidates } from '../shared/metadata'
 import google from './fixtures/google-volumes.json'
 import openLibrary from './fixtures/openlibrary-data.json'
 
