@@ -3,56 +3,84 @@
 # Home Library
 
 Android-first Expo app (SDK 57, Expo Router, TypeScript) for cataloguing physical books across several **libraries**
-(home, office, a friend's home). Backend: **Supabase cloud** project `jcqnojqtqzpdjuivtcgr` (Postgres + RLS, Storage,
-Vault, Edge Functions). Sibling of `~/projects/financy`; configs and UI kit were copied from there.
+(home, office, a friend's home), backed by a self-hosted **NestJS API** (`server/`) on the home server via Coolify:
+Postgres 17 + Prisma 7, Better Auth, Garage (S3) for covers, home Ollama for AI. Supabase was the first backend and was
+removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy` (same Expo conventions).
+
+## Repo layout
+- `src/`: the Expo app. `shared/`: framework-free code used by both sides: `isbn.ts`, `metadata.ts` (Open Library +
+  Google Books), `ai.ts` (prompts, parsers, OpenAI-compatible client), `permissions.ts`, and **zod contracts**
+  (`shared/contracts/*.ts`) for every request/response. App imports `~shared/*`; server imports `../../../shared/*`.
+  Relative imports inside `shared/` use `.ts` extensions (app: `allowImportingTsExtensions`; server: `rewriteRelativeImportExtensions`).
+- `server/`: NestJS 11 + Express (Better Auth's Nest integration is Express-first), Prisma `~7.10` (npm latest is the
+  Prisma 8 RC; don't upgrade blindly), nestjs-zod 5.5 (blocks Nest 12). `module: node20` so the CommonJS output can require the
+  ESM-only better-auth packages.
 
 ## Domain
-- **Library** = tenant. Membership is `owner` (every permission, only role that can rename/delete the library or change owners)
-  or `member` with a **granular permission set** (`library_permission` enum ↔ `src/constants/Permissions.ts`, keep in sync):
-  `books.add`, `books.edit`, `books.move`, `loans.manage`, `books.archive`, `books.delete`, `shelves.manage`, `audits.run`,
-  `members.manage`, `ai.manage`. Everyone can read/search/see reports. Presets (Editor/Lender/Auditor/Viewer) are UI-only.
+- **Library** = tenant. Membership is `owner` (every permission; only role that can rename/delete the library or change owners)
+  or `member` with a **granular permission set** (`library_permission` enum ↔ `shared/permissions.ts`; UI labels/presets in
+  `src/constants/Permissions.ts`): `books.add`, `books.edit`, `books.move`, `loans.manage`, `books.archive`,
+  `books.delete`, `shelves.manage`, `audits.run`, `members.manage`, `ai.manage`. Everyone can read/search/see stats.
   A `members.manage` holder can only grant/revoke permissions they hold and never touches owners.
-- Joining: invite codes (`create_invite` → share → `accept_invite`), carrying a permission set. No email sending needed.
-- **Racks → shelves** (both renamable, sortable by `position`). A **book row = one physical copy**; `shelf_id` is its
-  home shelf: kept while lent out or missing, cleared when archived (DB check constraint).
-- Status machine: `on_shelf` ⇄ `borrowed` (lend/return), `on_shelf` → `missing` (audit completion) → `on_shelf` (seen again /
-  `mark_book_found`), any → `archived` (donate/lost/discarded) → `on_shelf` (restore). Every change writes `book_events`.
-- Audits: `random` (N books weighted to longest-unseen) or `shelf` (scan every barcode on a shelf; unknown/elsewhere books
-  recorded as `unexpected`). Completing marks unchecked items missing.
+- Joining: invite codes (create → share → accept) carrying a permission set. Everyone (kids too) has their own account.
+- **Bookcases (racks) → shelves**. A **book row = one physical copy**; `shelf_id` is its home shelf: kept while lent out or
+  missing, cleared when given away (DB check constraint).
+- Status machine: `on_shelf` ⇄ `borrowed` (lend/return), `on_shelf` → `missing` (finishing a book check) → `on_shelf`
+  (seen again / "I found it"), any → `archived` (given away/lost/discarded) → `on_shelf` (bring back). Every change writes `book_events`.
+- Book checks: `random` (N books weighted to longest-unseen; the app plays it as a one-book-at-a-time game) or `shelf`
+  (scan every barcode; books from other shelves recorded as `unexpected`). Finishing marks unchecked items missing.
 
-## Architecture
-- `supabase/migrations/`: `core_schema` (tables, composite `(id, library_id)` FKs so rows can't cross tenants),
-  `rls` (helpers `is_member`/`is_owner`/`has_permission`/`require_permission`, column-level grants), `rpcs` (every state
-  change; `require_permission` raises 42501 with the permission in HINT → `src/utils/Errors.ts` names it), `storage`
-  (public-read `covers` bucket, writes need books.add/edit for the first path segment = library id).
-- Clients can't write `books.status/shelf_id/archived_*`, `library_members`, `loans`, `audits`, `book_events` directly: RPCs only.
-- **AI keys** live in Vault via `set_ai_provider`; `library_ai_providers` has no client grants; `ai_config_for` is service_role
-  only. `libraries.enrich_provider` / `vision_provider` pick which configured provider does what.
-- Edge functions (`supabase/functions`, Deno): `lookup-book` (ISBN → Open Library + Google Books merge, or title/author →
-  candidates; no AI, fast), `enrich-book` (AI tags/categories/description; app calls it in the background after lookup),
-  `identify-cover` (vision → title/authors → candidates; 409 `ai_not_configured` without a vision provider). Auth: JWT
-  verified with the service role + explicit membership check (`_shared/http.ts`); queries must stay scoped to the library.
-  One OpenAI-compatible adapter (`_shared/ai.ts`) serves OpenAI, Gemini (`/v1beta/openai`) and self-hosted gateways.
-- **Ollama** (home server, CPU-only, LAN-only) is reached only through **OmniRoute** `https://omniroute.home.nitroxis.com/v1`
-  (Bearer key, model `ollama-local/hf.co/unsloth/Qwen3.5-0.8B-GGUF:UD-Q4_K_XL`), configured per library as provider
-  `openai_compatible`. ~10–30 s per call, vision untested → use it for enrichment only; covers need OpenAI/Gemini.
-- App: `src/app` routes (`(tabs)` Home/Shelves/Search/Reports + centre scan button), hooks call `getSupabase()` directly
-  (no backend interface layer), `mappers/SupabaseMapper.ts` (snake_case rows ↔ models), `library/LibraryProvider.tsx`
-  (current library + `useCan(permission)`), route guards in `_layout.tsx` (signed out → sign-in; no library → welcome).
-- Shared pure code: `src` imports `supabase/functions/_shared/*.ts` via the `~fn/*` alias (only import-free files like
-  `isbn.ts`, `metadata.ts` types).
-- The Supabase client is untyped (no generated `Database.ts` yet); row shapes are declared in the mapper.
+## API (server/)
+- Routes under `/api`; every library route is `/api/libraries/:libraryId/...`. Swagger at `/docs`, `/health` public.
+- **AccessGuard** (the single global guard, in a fixed order): Better Auth session → `@AllowAnonymous`/`@OptionalAuth` →
+  401 → **unverified users are read-only** (403 `email_unverified`; `@AllowUnverified` exempts e.g. lookup) →
+  `@RequireLibrary(permission?)`: no membership = **404** (other libraries are invisible), missing permission = 403
+  `{ code: 'forbidden', permission }`. Secondary checks inside services use `requirePermission()` (e.g. returning a book
+  to another shelf also needs `books.move`; enrich/presign need `books.add` or `books.edit`).
+- State changes run in `prisma.$transaction` with `SELECT … FOR UPDATE` (`books/BookLocks.ts`). DB constraints are the
+  backstop; `ErrorFilter` maps P2002 → 409 `duplicate`, FK violations (P2003, or P2039/SQLSTATE 23001 for RESTRICT) → 409 `in_use`.
+  Error shape everywhere: `{ statusCode, code, message, ...extra }`.
+- The Prisma schema mirrors the old SQL (snake_case via @map). Composite FKs `(x_id, library_id)` keep rows inside their
+  tenant; CHECKs + `pg_trgm` are hand-written in the init migration. No stored tsvector: search builds it on the fly.
+  Nested `createMany` can't fill composite FKs, so audit items are inserted separately.
+- **Auth = Better Auth 1.7** (`server/src/auth/CreateAuth.ts`):
+  - Methods: email+password, email OTP (verification on sign-up, passwordless sign-in, password reset; typed 6-digit
+    codes sent through Resend) and Google ID-token sign-in (web client first in `GOOGLE_CLIENT_IDS`).
+  - Google auto-links only to *verified* accounts (Better Auth's `requireLocalEmailVerified` default); the app explains the
+    `OAUTH_LINK_ERROR` case.
+  - 90-day sliding sessions; database-backed rate limits.
+  - Delete-user is blocked for the last owner of a shared library; solo libraries are deleted; loans keep the borrower's name.
+  - Gotcha: sending the OTP on sign-up needs `emailVerification.sendOnSignUp` when `overrideDefaultEmailVerification` is set.
+  - Passkeys are phase 2; the table already exists.
+- AI: per-library OpenAI/Gemini/self-hosted keys sealed with AES-256-GCM (`AI_KEYS_KEY`, never returned). Enrichment uses the
+  library's provider, else **Home AI** (direct Ollama `/api/chat`, `format` schema, `think:false`, queued one at a time)
+  when the server admin (`ADMIN_EMAILS`) allowed it for that library. Cover recognition needs a vision provider (OpenAI/Gemini).
+- Covers: `POST /covers/presign` → the app PUTs the JPEG straight to Garage (`library-covers` bucket); key
+  `{library}/{book}-{ts}.jpg`. The S3Client must use `requestChecksumCalculation: 'WHEN_REQUIRED'` (Garage rejects SDK CRC32).
+
+## App
+- `src/api/Auth.ts` (Better Auth client, cookie in SecureStore), `src/api/Http.ts` (`api.get/post/...` sends the cookie,
+  throws `ApiError {status, code, permission}` from `src/api/ApiError.ts`), `coverUri()` → `EXPO_PUBLIC_COVERS_URL`.
+- Hooks (`src/hooks/*`) call the API with React Query; models (`src/models/*`) are aliases of the shared contract types.
+- Route guards (`src/app/_layout.tsx`): signed out → sign-in/sign-up/sign-in-code/forgot-password; signed in but
+  unverified → verify-email only; verified without a library → welcome; otherwise the app. Devices + delete-account live in settings.
+- Google sign-in: `react-native-nitro-google-signin` (Android **Credential Manager**: one tap → create → account sheet) in
+  `src/auth/GoogleSignIn.ts`. Its config plugin is NOT in app.json: Android needs none, and the plugin throws without an
+  iOS `iosUrlScheme` (add it when an iOS OAuth client exists).
 
 ## Commands
-- `npm run typecheck`, `npm run lint`, `npm run test:ci` (Vitest, ≥85% coverage on utils/mappers/_shared), `npm run check:fn` (deno check).
-- `npm run test:db`: pgTAP (`supabase/tests/database`) in a throwaway `supabase/postgres` container. **Not on this Mac**
-  (no local Docker DB tests, same policy as financy): ask the `homeserver` Claude session to rsync `supabase/` + `scripts/`
-  and run it (`DOCKER="sudo docker"` + a psql shim; the bare image lacks the storage schema, so the covers migration is a no-op there).
-- Deploy: `supabase login` → `supabase link --project-ref jcqnojqtqzpdjuivtcgr` → `supabase db push` →
-  `supabase functions deploy lookup-book enrich-book identify-cover`. Optional secret: `GOOGLE_BOOKS_API_KEY`.
-- Dev: `npx expo run:android` or a dev client (`eas build --profile development --local`), then `npx expo start --dev-client`.
-  Release APK: `npm run build:preview` (clears Metro cache, local EAS build, `scripts/check-apk.sh`).
-- `.env.local` (gitignored, bundled via `.easignore` for local builds): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY`.
+- App: `npm run typecheck`, `npm run lint`, `npm run test:ci` (Vitest, ≥85% coverage on utils/ApiError/shared), `npx expo-doctor`.
+- API: `cd server && npm test` (Vitest + unplugin-swc; e2e on **PGlite** in-process, incl. the permission matrix), `npx tsc --noEmit`,
+  `npx nest build` → `dist/server/src/main.js`.
+  - `npm run test:e2e:pg` runs the same suite on a throwaway Postgres 17 container. **Run it on the home server** (ask the
+    `homeserver` session); there are no Docker DB tests on this Mac.
+  - `test/smoke/Garage.smoke.test.ts` runs only when `server/.env.garage` exists (live Garage upload check).
+- Prisma: edit `server/prisma/schema.prisma`, then `npx prisma migrate dev --create-only` against a dev DB and hand-add any
+  CHECKs/extensions. `npx prisma generate` writes `server/src/generated/prisma` (gitignored).
+- Deploy: a Coolify Docker Compose resource with base dir `/` and compose file `server/docker-compose.coolify.yml` (api + postgres:17,
+  networks default + `n8n_default`), domain `https://api.library.nitroxis.com`. The container runs `prisma migrate deploy` on start.
+- App env (`.env.local`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_COVERS_URL`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
+  Release APK: `npm run build:preview` (clears the Metro cache, builds locally with EAS, runs `scripts/check-apk.sh`).
 
 ## UX conventions (kid-friendly: "a 6-year-old can use it")
 - **Pictures first**: books appear as covers (`BookTile`/`BookGrid`, shelves as cover rows on a "plank"); emoji label big actions.
