@@ -48,10 +48,13 @@ const ENDPOINTS: IEndpoint[] = [
   { name: 'invite', needs: 'members.manage', method: 'post', path: () => 'invites', body: () => ({ permissions: [] }) },
   { name: 'set permissions', needs: 'members.manage', method: 'put', path: f => `members/${f.victim}/permissions`, body: () => ({ permissions: [] }) },
   { name: 'revoke invite', needs: 'members.manage', method: 'delete', path: f => `invites/${f.invite}` },
+  { name: 'set AI provider', needs: 'ai.manage', method: 'put', path: () => 'ai/providers/openai', body: () => ({ model: 'gpt-x', apiKey: 'sk-test' }) },
+  { name: 'choose AI usage', needs: 'ai.manage', method: 'put', path: () => 'ai/usage', body: () => ({ enrich: null, vision: null }) },
+  { name: 'remove AI provider', needs: 'ai.manage', method: 'delete', path: () => 'ai/providers/gemini' },
   { name: 'delete book', needs: 'books.delete', method: 'delete', path: f => `books/${f.book}` },
 ]
 
-const READS = ['racks', 'books', 'loans?open=true', 'audits', 'members']
+const READS = ['racks', 'books', 'loans?open=true', 'audits', 'members', 'search?q=shelf', 'tags', 'stats', 'ai/providers']
 
 describe('permission matrix', () => {
   let t: ITestApp

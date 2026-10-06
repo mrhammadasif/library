@@ -29,6 +29,12 @@ export async function createTestApp(): Promise<ITestApp> {
     ADMIN_EMAILS: 'admin@test.local',
     AI_KEYS_KEY: Buffer.alloc(32, 7).toString('base64'),
     RATE_LIMIT_ENABLED: 'false',
+    // Presigning is local signing (no network), so fake storage settings are enough.
+    S3_ENDPOINT: 'https://s3.test.local',
+    S3_ACCESS_KEY_ID: 'test-key',
+    S3_SECRET_ACCESS_KEY: 'test-secret',
+    COVERS_PUBLIC_URL: 'https://covers.test.local',
+    OLLAMA_URL: 'http://ollama.test:11434',
   })
   const auth = createAuth({
     prisma: db.prisma,
