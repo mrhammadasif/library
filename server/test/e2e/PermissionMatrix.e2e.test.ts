@@ -90,9 +90,12 @@ describe('permission matrix', () => {
     return e.body ? req.send(e.body(f)) : req
   }
 
+  // One setup per permission: within a run only that permission's endpoints change anything (every other call is a
+  // 403 before touching data), and the endpoint order keeps each allowed call independent of the others. A per-endpoint
+  // setup took >30 s per case on the home server's CPU.
   it.each(PERMISSIONS.map(p => [p]))('%s alone unlocks exactly its endpoints', async (permission) => {
+    const { user, f } = await setup([permission])
     for (const e of ENDPOINTS) {
-      const { user, f } = await setup([permission])
       const res = await call(user, f, e)
       if (e.needs === permission) {
         expect(res.status, `${e.name}: ${JSON.stringify(res.body)}`).toBeLessThan(400)
@@ -102,7 +105,7 @@ describe('permission matrix', () => {
         expect(res.body.permission, e.name).toBe(e.needs)
       }
     }
-  })
+  }, 120_000)
 
   it('lets every member read, even with no permissions', async () => {
     const { user, f } = await setup([])

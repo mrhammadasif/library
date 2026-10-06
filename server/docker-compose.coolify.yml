@@ -1,7 +1,7 @@
 # Coolify "Docker Compose" resource. Base directory: /  Compose file: server/docker-compose.coolify.yml
 # Domain: https://api.library.home.nitroxis.com → api:3000 (set in Coolify). All values come from Coolify's env UI.
-# Postgres is a standalone Coolify database ("library-postgres" in the "common" project), reached over the `coolify`
-# network ("Connect To Predefined Network" on this resource); DATABASE_URL points at its container name.
+# Postgres is the shared Coolify database "nitroxis-pg" (project "common"; database + role `library`, pg_trgm pre-created),
+# reached over the `coolify` network ("Connect To Predefined Network"); DATABASE_URL points at its container name.
 services:
   api:
     build:
