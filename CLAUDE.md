@@ -77,8 +77,9 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   - `test/smoke/Garage.smoke.test.ts` runs only when `server/.env.garage` exists (live Garage upload check).
 - Prisma: edit `server/prisma/schema.prisma`, then `npx prisma migrate dev --create-only` against a dev DB and hand-add any
   CHECKs/extensions. `npx prisma generate` writes `server/src/generated/prisma` (gitignored).
-- Deploy: a Coolify Docker Compose resource with base dir `/` and compose file `server/docker-compose.coolify.yml` (api + postgres:17,
-  networks default + `n8n_default`), domain `https://api.library.home.nitroxis.com`. The container runs `prisma migrate deploy` on start.
+- Deploy: a Coolify Docker Compose resource "library-api" with base dir `/` and compose file `server/docker-compose.coolify.yml`
+  (api only; networks default + `n8n_default`). Postgres 17 is the standalone Coolify database "library-postgres" in the
+  "common" project, reached over the `coolify` network ("Connect To Predefined Network") via `DATABASE_URL`, domain `https://api.library.home.nitroxis.com`. The container runs `prisma migrate deploy` on start.
 - App env (`.env.local`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_COVERS_URL`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
   Release APK: `npm run build:preview` (clears the Metro cache, builds locally with EAS, runs `scripts/check-apk.sh`).
 
