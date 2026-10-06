@@ -9,7 +9,7 @@ unzip -q -o "$APK" assets/index.android.bundle -d "$tmp"
 # Dump strings to a file first: `strings | grep -q` under pipefail reports failure when grep exits early (SIGPIPE).
 strings -n 4 "$tmp/assets/index.android.bundle" > "$tmp/strings.txt"
 leftover=$(grep -oE 'EXPO_PUBLIC_(API_URL|COVERS_URL|GOOGLE_WEB_CLIENT_ID)' "$tmp/strings.txt" | sort -u || true)
-if ! grep -q 'api.library.nitroxis.com' "$tmp/strings.txt"; then
+if ! grep -q 'api.library.home.nitroxis.com' "$tmp/strings.txt"; then
   echo "FAIL: API URL not found in bundle"
   exit 1
 fi
