@@ -12,7 +12,7 @@
       "ios"
     ],
     "android": {
-      "package": "com.nitroxis.homelibrary",
+      "package": "com.nitroxis.library",
       "adaptiveIcon": {
         "backgroundColor": "#2F5D50",
         "foregroundImage": "./assets/images/android-icon-foreground.png"
@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "ios": {
-      "bundleIdentifier": "com.nitroxis.homelibrary"
+      "bundleIdentifier": "com.nitroxis.library"
     },
     "plugins": [
       "expo-router",
@@ -64,6 +64,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "nitroxis",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a41aff81-7bc9-4175-980b-01dfe098e172"
+      }
     }
   }
 }
