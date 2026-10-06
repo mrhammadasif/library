@@ -15,13 +15,15 @@ export function Chip({ label, selected = false, onPress, onRemove, swatch }: ICh
     <Pressable
       onPress={onPress}
       disabled={!onPress}
-      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${selected ? 'border-primary bg-primary-soft' : 'border-line bg-card'}`}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityState={{ selected }}
+      className={`min-h-11 flex-row items-center gap-2 rounded-full border-2 px-4 py-2 ${selected ? 'border-primary bg-primary-soft' : 'border-line bg-card'}`}
     >
-      {swatch && <View className="h-3.5 w-3.5 rounded-full border border-line" style={{ backgroundColor: swatch }} />}
-      <Text className={`text-sm ${selected ? 'font-semibold text-primary' : 'text-ink'}`}>{label}</Text>
+      {swatch && <View className="h-4 w-4 rounded-full border border-line" style={{ backgroundColor: swatch }} />}
+      <Text className={`text-base ${selected ? 'font-bold text-primary' : 'text-ink'}`}>{label}</Text>
       {onRemove && (
-        <Pressable hitSlop={8} onPress={onRemove}>
-          <Feather name="x" size={14} color={Colors.muted} />
+        <Pressable hitSlop={10} onPress={onRemove} accessibilityLabel={`Remove ${label}`}>
+          <Feather name="x" size={16} color={Colors.muted} />
         </Pressable>
       )}
     </Pressable>

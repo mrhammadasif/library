@@ -37,14 +37,14 @@ export default function SignInScreen() {
             <Feather name="book-open" size={30} color="#fff" />
           </View>
           <Text className="text-4xl font-bold tracking-tight text-ink">Home Library</Text>
-          <Text className="text-base text-muted">Every book on every shelf, one scan away.</Text>
+          <Text className="text-lg text-muted">Every book on every shelf, one scan away 📚</Text>
         </View>
         <View className="gap-4">
           <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={onSubmit} />
           {error && <Text className="text-center text-sm text-negative">{error}</Text>}
-          <Button label="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password} />
-          <Link href="/sign-up" className="py-2 text-center text-base font-semibold text-primary">New here? Create an account</Link>
+          <Button big label="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password} />
+          <Link href="/sign-up" className="py-3 text-center text-lg font-semibold text-primary">New here? Create an account</Link>
         </View>
       </KeyboardAvoidingView>
     </SafeArea>

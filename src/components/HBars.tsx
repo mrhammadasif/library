@@ -16,10 +16,10 @@ export function HBars({ bars, max }: { bars: IBar[], max?: number }) {
       {bars.map(bar => (
         <View key={bar.label} className="gap-1">
           <View className="flex-row justify-between">
-            <Text className="flex-1 text-sm text-ink" numberOfLines={1}>{bar.label}</Text>
-            <Text className="text-sm font-semibold text-muted">{bar.value}</Text>
+            <Text className="flex-1 text-base text-ink" numberOfLines={1}>{bar.label}</Text>
+            <Text className="text-base font-semibold text-muted">{bar.value}</Text>
           </View>
-          <View className="h-2 overflow-hidden rounded-full" style={{ backgroundColor: Colors.line }}>
+          <View className="h-3 overflow-hidden rounded-full" style={{ backgroundColor: Colors.line }}>
             <View
               className="h-full rounded-full"
               style={{ width: `${(bar.value / top) * 100}%`, backgroundColor: bar.color ?? Colors.primary }}

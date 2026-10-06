@@ -1,9 +1,11 @@
 import type { IBookFields } from '~/models/IBook'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
-import { Text } from 'react-native'
-import { BookForm } from '~/components/BookForm'
+import { Text, View } from 'react-native'
+import { BookBasicsForm, BookDetailsForm } from '~/components/BookForm'
 import { Button } from '~/components/Button'
+import { ColorSwatches } from '~/components/ColorSwatches'
+import { CoverHero } from '~/components/CoverHero'
 import { ErrorState, Loading } from '~/components/EmptyState'
 import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
@@ -23,6 +25,10 @@ function EditForm({ bookId, initial }: { bookId: string, initial: IBookFields })
   const [localCover, setLocalCover] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function onChange<K extends keyof IBookFields>(key: K, value: IBookFields[K]) {
+    setFields(current => ({ ...current, [key]: value }))
+  }
 
   async function takeCover(source: 'camera' | 'gallery') {
     const photo = await captureCover(source)
@@ -58,16 +64,24 @@ function EditForm({ bookId, initial }: { bookId: string, initial: IBookFields })
 
   return (
     <>
-      <BookForm
-        fields={fields}
-        onChange={(key, value) => setFields(current => ({ ...current, [key]: value }))}
-        localCoverUri={localCover}
+      <CoverHero
+        title={fields.title}
+        authors={fields.authors}
+        coverPath={fields.coverPath}
+        coverUrl={fields.coverUrl}
+        localUri={localCover}
+        color={fields.dominantColor}
         onTakeCover={() => takeCover('camera')}
         onPickCover={() => takeCover('gallery')}
-        tagSuggestions={(tags.data ?? []).map(t => t.tag)}
       />
+      <BookBasicsForm fields={fields} onChange={onChange} />
+      <View className="gap-2">
+        <Text className="px-1 text-sm font-semibold text-muted">Colour</Text>
+        <ColorSwatches value={fields.colorName} onChange={c => onChange('colorName', c)} />
+      </View>
+      <BookDetailsForm fields={fields} onChange={onChange} tagSuggestions={(tags.data ?? []).map(t => t.tag)} />
       {error && <Text className="text-center text-sm text-negative">{error}</Text>}
-      <Button label="Save changes" icon="check" loading={saving} onPress={save} />
+      <Button big label="Save changes" icon="check" loading={saving} onPress={save} />
     </>
   )
 }

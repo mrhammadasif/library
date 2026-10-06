@@ -6,17 +6,21 @@ import { router, useLocalSearchParams } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { BookCover } from '~/components/BookCover'
-import { BookForm } from '~/components/BookForm'
+import { BookBasicsForm, BookDetailsForm } from '~/components/BookForm'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
+import { Collapsible } from '~/components/Collapsible'
+import { ColorSwatches } from '~/components/ColorSwatches'
+import { CoverHero } from '~/components/CoverHero'
 import { Loading } from '~/components/EmptyState'
 import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
-import { ShelfPicker } from '~/components/ShelfPicker'
+import { ShelfChoice, ShelfPicker } from '~/components/ShelfPicker'
+import { useToast } from '~/components/Toast'
 import { StorageKeys } from '~/constants/StorageKeys'
 import { useAddBook, useTags } from '~/hooks/Books'
 import { enrichDraft, lookupIsbn, lookupText } from '~/hooks/Lookup'
-import { useRacks } from '~/hooks/Shelves'
+import { shelfLabels, useRacks } from '~/hooks/Shelves'
 import { useCurrentLibrary } from '~/library/LibraryProvider'
 import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft } from '~/utils/BookForm'
 import { hexToColorName } from '~/utils/ColorName'
@@ -39,6 +43,9 @@ export default function ReviewScreen() {
   const racks = useRacks(library.id)
   const tags = useTags(library.id)
   const addBook = useAddBook()
+  const toast = useToast()
+  const [lastShelf, setLastShelf] = useState<string | null>(null)
+  const [pickingShelf, setPickingShelf] = useState(false)
   const [fields, setFields] = useState<IBookFields>(() => ({ ...emptyFields(), isbn13: params.isbn ?? null }))
   // A ref, not state: async AI/colour callbacks must see edits made while they were running.
   const touched = useRef(new Set<keyof IBookFields>())
@@ -52,7 +59,12 @@ export default function ReviewScreen() {
 
   // Remember the last shelf per library: batch-adding a shelf's worth of books is the common case.
   useEffect(() => {
-    readJson<string>(StorageKeys.LastShelf(library.id)).then(id => id && setShelfId(prev => prev ?? id)).catch(() => {})
+    readJson<string>(StorageKeys.LastShelf(library.id)).then((id) => {
+      if (id) {
+        setLastShelf(id)
+        setShelfId(prev => prev ?? id)
+      }
+    }).catch(() => {})
   }, [library.id])
 
   useEffect(() => {
@@ -143,13 +155,13 @@ export default function ReviewScreen() {
     }
   }
 
-  async function save(next: 'scan' | 'book') {
+  async function save() {
     if (!fields.title.trim()) {
-      setTitleError('A title is required')
+      setTitleError('Type the book\'s name first')
       return
     }
     if (!shelfId) {
-      setSaveError('Choose the shelf this book lives on.')
+      setSaveError('Pick a shelf first 👆')
       return
     }
     setSaving(true)
@@ -159,15 +171,13 @@ export default function ReviewScreen() {
       const coverPath = localCover ? await uploadCover(library.id, id, localCover) : fields.coverPath
       await addBook.mutateAsync({ libraryId: library.id, shelfId, id, fields: { ...fields, coverPath } })
       await writeJson(StorageKeys.LastShelf(library.id), shelfId)
-      if (next === 'scan' && params.from === 'scan') {
+      toast(`Added to ${shelfLabels(racks.data).get(shelfId) ?? 'the shelf'}`, '📚')
+      // From the scanner: straight back to it, ready for the next book.
+      if (params.from === 'scan') {
         router.back()
       }
-      else if (next === 'scan') {
-        router.replace('/add/scan')
-      }
       else {
-        router.dismissAll()
-        router.push({ pathname: '/book/[id]', params: { id } })
+        router.replace({ pathname: '/book/[id]', params: { id } })
       }
     }
     catch (e) {
@@ -180,32 +190,44 @@ export default function ReviewScreen() {
 
   const existing = lookup.result?.existingCopies ?? []
   const candidates = lookup.result?.candidates ?? []
+  const found = !!fields.title && !lookup.loading
+  const shelfLabel = shelfId ? shelfLabels(racks.data).get(shelfId) : undefined
   return (
-    <Screen header={<Header title="Review book" subtitle={params.isbn ? `ISBN ${params.isbn}` : undefined} />}>
-      {lookup.loading && (
-        <Card className="items-center gap-1 py-4">
-          <Loading />
-          <Text className="text-sm text-muted">Looking it up…</Text>
-        </Card>
-      )}
-      {lookup.error && <Text className="text-sm text-warn">{lookup.error}</Text>}
-      {params.isbn && !lookup.loading && !lookup.result?.draft && !lookup.error && (
-        <Text className="text-sm text-warn">No details found online for this ISBN. Fill in the title and save.</Text>
-      )}
+    <Screen header={<Header title={found ? 'Is this your book?' : 'Add a book'} />}>
+      {lookup.loading
+        ? (
+            <Card className="items-center gap-2 py-10">
+              <Loading />
+              <Text className="text-lg text-ink">Looking it up… 🔎</Text>
+            </Card>
+          )
+        : (
+            <CoverHero
+              title={fields.title}
+              authors={fields.authors}
+              coverPath={fields.coverPath}
+              coverUrl={fields.coverUrl}
+              localUri={localCover}
+              color={fields.dominantColor}
+              onTakeCover={() => takeCover('camera')}
+              onPickCover={() => takeCover('gallery')}
+            />
+          )}
+
+      {lookup.error && <Text className="text-center text-base text-warn">{lookup.error}</Text>}
       {existing.length > 0 && (
-        <Card className="gap-1 border-warn bg-warn-soft py-3">
-          <Text className="text-sm font-semibold text-ink">
-            {existing.length === 1 ? 'You already have a copy of this book.' : `You already have ${existing.length} copies.`}
+        <Card className="flex-row items-center gap-3 border-warn bg-warn-soft py-3">
+          <Text className="text-2xl">👯</Text>
+          <Text className="flex-1 text-base text-ink">
+            {existing.length === 1 ? 'You already have this book. Saving adds a second copy.' : `You already have ${existing.length} copies. Saving adds another.`}
           </Text>
-          <Text className="text-xs text-muted">Saving adds another copy.</Text>
         </Card>
       )}
-      {ai === 'working' && <Text className="text-sm text-muted">✨ Getting tag suggestions from AI…</Text>}
-      {ai === 'failed' && <Text className="text-sm text-faint">AI suggestions are unavailable right now.</Text>}
+      {ai === 'working' && <Text className="text-center text-base text-muted">✨ Adding tags with AI…</Text>}
 
       {candidates.length > 0 && (
         <View className="gap-2">
-          <Text className="text-sm font-semibold text-muted">Pick a match</Text>
+          <Text className="text-lg font-bold text-ink">Which one is it?</Text>
           {candidates.map(c => (
             <Pressable
               key={`${c.isbn13}-${c.title}-${c.publisher}`}
@@ -213,41 +235,64 @@ export default function ReviewScreen() {
                 applyDraft(c)
                 setLookup({ loading: false, result: null, error: null })
               }}
-              className="flex-row gap-3 rounded-2xl border border-line bg-card p-3"
+              className="min-h-16 flex-row items-center gap-3 rounded-2xl border-2 border-line bg-card p-3"
             >
-              <BookCover title={c.title} uri={c.coverUrl} width={40} />
+              <BookCover title={c.title} uri={c.coverUrl} width={48} />
               <View className="flex-1">
-                <Text className="text-base font-semibold text-ink" numberOfLines={2}>{c.title}</Text>
-                <Text className="text-xs text-muted">{[c.authors[0], c.publisher, c.publishedYear].filter(Boolean).join(' · ')}</Text>
+                <Text className="text-lg font-semibold text-ink" numberOfLines={2}>{c.title}</Text>
+                <Text className="text-sm text-muted">{[c.authors[0], c.publisher, c.publishedYear].filter(Boolean).join(' · ')}</Text>
               </View>
             </Pressable>
           ))}
         </View>
       )}
 
-      <Card className="gap-3 py-4">
-        <Text className="text-base font-bold text-ink">Shelf</Text>
-        {racks.data ? <ShelfPicker racks={racks.data} value={shelfId} onChange={setShelfId} /> : <Loading />}
-      </Card>
+      {!lookup.loading && (
+        <>
+          {!fields.title && params.isbn && (
+            <Text className="text-center text-base text-muted">We couldn't find this book online. Type its name below 👇</Text>
+          )}
+          <Collapsible title={fields.title ? '✏️ Fix the title or author' : '✏️ Title and author'} initiallyOpen={!fields.title}>
+            <BookBasicsForm fields={fields} onChange={onChange} titleError={titleError} />
+            {!params.isbn && !params.pending && (
+              <Button variant="secondary" icon="globe" label="Find it online" disabled={!fields.title.trim()} onPress={findOnline} />
+            )}
+          </Collapsible>
 
-      <BookForm
-        fields={fields}
-        onChange={onChange}
-        localCoverUri={localCover}
-        onTakeCover={() => takeCover('camera')}
-        onPickCover={() => takeCover('gallery')}
-        tagSuggestions={(tags.data ?? []).map(t => t.tag)}
-        titleError={titleError}
-      />
-      {!params.isbn && !params.pending && (
-        <Button variant="secondary" icon="globe" label="Find details online" disabled={!fields.title.trim()} onPress={findOnline} />
+          <View className="gap-3">
+            <Text className="text-xl font-bold text-ink">Which shelf does it go on?</Text>
+            {shelfLabel && !pickingShelf
+              ? <ShelfChoice label={shelfLabel} onChange={() => setPickingShelf(true)} />
+              : racks.data
+                ? (
+                    <ShelfPicker
+                      racks={racks.data}
+                      value={shelfId}
+                      recent={lastShelf}
+                      onChange={(id) => {
+                        setShelfId(id)
+                        setPickingShelf(false)
+                        setSaveError(null)
+                      }}
+                    />
+                  )
+                : <Loading />}
+          </View>
+
+          <View className="gap-3">
+            <Text className="text-xl font-bold text-ink">What colour is it?</Text>
+            <Text className="-mt-2 text-sm text-muted">Helps you spot it on the shelf later.</Text>
+            <ColorSwatches value={fields.colorName} onChange={c => onChange('colorName', c)} />
+          </View>
+
+          <Collapsible title="More details">
+            <BookDetailsForm fields={fields} onChange={onChange} tagSuggestions={(tags.data ?? []).map(t => t.tag)} />
+          </Collapsible>
+
+          {saveError && <Text className="text-center text-base text-negative">{saveError}</Text>}
+          <Button big icon="check" label="Put it on the shelf" loading={saving} onPress={save} />
+        </>
       )}
-
-      {saveError && <Text className="text-center text-sm text-negative">{saveError}</Text>}
-      <View className="gap-3">
-        <Button label="Save & scan next" icon="maximize" loading={saving} onPress={() => save('scan')} />
-        <Button variant="secondary" label="Save" loading={saving} onPress={() => save('book')} />
-      </View>
     </Screen>
   )
 }

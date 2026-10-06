@@ -14,17 +14,17 @@ interface IFieldProps extends Omit<TextInputProps, 'value' | 'onChangeText'> {
 export function Field({ label, value, onChangeText, hint, error, multiline, ...rest }: IFieldProps) {
   return (
     <View className="gap-1.5">
-      <Text className="px-1 text-sm font-semibold text-muted">{label}</Text>
+      <Text className="px-1 text-base font-semibold text-muted">{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         multiline={multiline}
         placeholderTextColor={Colors.faint}
-        className={`rounded-xl border bg-card px-4 py-3 text-base text-ink ${error ? 'border-negative' : 'border-line'} ${multiline ? 'min-h-24' : ''}`}
+        className={`min-h-14 rounded-2xl border-2 bg-card px-4 py-3 text-lg text-ink ${error ? 'border-negative' : 'border-line'} ${multiline ? 'min-h-28' : ''}`}
         style={multiline ? { textAlignVertical: 'top' } : undefined}
         {...rest}
       />
-      {(error || hint) && <Text className={`px-1 text-xs ${error ? 'text-negative' : 'text-faint'}`}>{error ?? hint}</Text>}
+      {(error || hint) && <Text className={`px-1 text-sm ${error ? 'font-semibold text-negative' : 'text-muted'}`}>{error ?? hint}</Text>}
     </View>
   )
 }

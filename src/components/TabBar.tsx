@@ -4,28 +4,28 @@ import { Feather } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { Pressable, Text, View } from 'react-native'
 import { Colors } from '~/constants/Colors'
-import { useCan } from '~/library/LibraryProvider'
 
 const TABS: Record<string, { label: string, icon: ComponentProps<typeof Feather>['name'] }> = {
   index: { label: 'Home', icon: 'home' },
   shelves: { label: 'Shelves', icon: 'layers' },
-  search: { label: 'Search', icon: 'search' },
-  reports: { label: 'Reports', icon: 'bar-chart-2' },
+  search: { label: 'Find', icon: 'search' },
+  reports: { label: 'Stats', icon: 'bar-chart-2' },
 }
 
-/** Home · Shelves · (scan) · Search · Reports — the centre button scans a new book (needs books.add). */
+/** Home · Shelves · (Scan) · Find · Stats. The big centre button scans any book: new ones get added, known ones show where they go. */
 export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
-  const canAdd = useCan('books.add')
-
   function renderTab(index: number) {
     const route = state.routes[index]
     const focused = state.index === index
     const tab = TABS[route.name]
-    const color = focused ? Colors.primary : Colors.faint
+    const color = focused ? Colors.primary : Colors.muted
     return (
       <Pressable
         key={route.key}
-        className="flex-1 items-center gap-1 pt-3"
+        accessibilityRole="tab"
+        accessibilityLabel={tab.label}
+        accessibilityState={{ selected: focused }}
+        className="min-h-14 flex-1 items-center gap-1 pt-3"
         onPress={() => {
           const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
           if (!focused && !event.defaultPrevented) {
@@ -33,8 +33,8 @@ export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
           }
         }}
       >
-        <Feather name={tab.icon} size={22} color={color} />
-        <Text className="text-xs font-medium" style={{ color }}>{tab.label}</Text>
+        <Feather name={tab.icon} size={26} color={color} />
+        <Text className={`text-sm ${focused ? 'font-bold' : 'font-medium'}`} style={{ color }}>{tab.label}</Text>
       </Pressable>
     )
   }
@@ -46,16 +46,17 @@ export function TabBar({ state, navigation, insets }: BottomTabBarProps) {
     >
       {renderTab(0)}
       {renderTab(1)}
-      <View className="w-20 items-center">
-        {canAdd && (
-          <Pressable
-            onPress={() => router.push('/add/scan')}
-            className="-mt-6 h-16 w-16 items-center justify-center rounded-full bg-primary"
-            style={{ shadowColor: Colors.walnut, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}
-          >
-            <Feather name="maximize" size={28} color="#fff" />
-          </Pressable>
-        )}
+      <View className="w-24 items-center">
+        <Pressable
+          onPress={() => router.push('/add/scan')}
+          accessibilityRole="button"
+          accessibilityLabel="Scan a book"
+          className="-mt-8 h-20 w-20 items-center justify-center rounded-full border-4 border-card bg-primary active:opacity-80"
+          style={{ shadowColor: Colors.walnut, shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 8 }}
+        >
+          <Feather name="maximize" size={32} color="#fff" />
+        </Pressable>
+        <Text className="mt-0.5 text-sm font-bold text-primary">Scan</Text>
       </View>
       {renderTab(2)}
       {renderTab(3)}

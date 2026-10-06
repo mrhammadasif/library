@@ -32,12 +32,12 @@ export default function PhotoScreen() {
       <Screen header={<Header title="Cover photo" close />}>
         <Card className="gap-3 py-5">
           <Feather name="cpu" size={24} color={Colors.primary} />
-          <Text className="text-lg font-bold text-ink">{'Cover recognition isn\'t set up'}</Text>
+          <Text className="text-xl font-bold text-ink">{'📷 Photos need a smart helper'}</Text>
           <Text className="text-base text-muted">
-            Recognising books from a photo needs an OpenAI or Gemini API key for this library.
-            {canManageAi ? '' : ' Ask the library owner to add one.'} You can still scan the barcode or type the book in.
+            To know a book from its cover, this library needs an OpenAI or Gemini key.
+            {canManageAi ? '' : ' Ask whoever looks after the library to add one.'} You can still scan the barcode or type the name.
           </Text>
-          {canManageAi && <Button label="Set up AI" icon="settings" onPress={() => router.replace('/ai-settings')} />}
+          {canManageAi && <Button label="Set it up" icon="settings" onPress={() => router.replace('/ai-settings')} />}
         </Card>
       </Screen>
     )
@@ -57,7 +57,7 @@ export default function PhotoScreen() {
       if (mode === 'search') {
         const q = identified.identification.isbn ?? identified.identification.title
         if (!q) {
-          setError('Couldn\'t read a title from that photo. Try again closer, with good light.')
+          setError('Hmm, I couldn\'t read that. Try again a bit closer, with good light 💡')
           return
         }
         router.back()
@@ -98,24 +98,25 @@ export default function PhotoScreen() {
   }
 
   return (
-    <Screen header={<Header title={mode === 'search' ? 'Search by cover' : 'Add from cover photo'} close />}>
+    <Screen header={<Header title={mode === 'search' ? 'Find it with a photo' : 'Photo of the cover'} close />}>
+      <Text className="text-center text-lg text-muted">Take a photo of the front of the book 📕</Text>
       <View className="flex-row gap-3">
-        <View className="flex-1"><Button icon="camera" label="Take photo" onPress={() => capture('camera')} disabled={busy} /></View>
-        <View className="flex-1"><Button variant="secondary" icon="image" label="Gallery" onPress={() => capture('gallery')} disabled={busy} /></View>
+        <View className="flex-1"><Button big icon="camera" label="Take photo" onPress={() => capture('camera')} disabled={busy} /></View>
+        <View className="flex-1"><Button big variant="secondary" icon="image" label="Gallery" onPress={() => capture('gallery')} disabled={busy} /></View>
       </View>
       {busy && (
         <Card className="items-center gap-2 py-6">
           <Loading />
-          <Text className="text-sm text-muted">Reading the cover…</Text>
+          <Text className="text-lg text-ink">Looking at the cover… 👀</Text>
         </Card>
       )}
       {error && <Text className="text-center text-sm text-negative">{error}</Text>}
       {result && (
         <View className="gap-3">
-          <Text className="text-base text-ink">
+          <Text className="text-lg text-ink">
             {result.identification.title
-              ? `Looks like "${result.identification.title}"${result.identification.authors[0] ? ` by ${result.identification.authors[0]}` : ''}. Pick the matching edition:`
-              : 'No book recognised. Try another photo.'}
+              ? `Is it "${result.identification.title}"${result.identification.authors[0] ? ` by ${result.identification.authors[0]}` : ''}? Tap the right one:`
+              : '🤔 I couldn\'t spot a book. Try another photo.'}
           </Text>
           {result.candidates.map(c => (
             <Pressable key={`${c.isbn13}-${c.title}-${c.publisher}`} onPress={() => choose(c)} className="flex-row gap-3 rounded-2xl border border-line bg-card p-3">
@@ -128,7 +129,7 @@ export default function PhotoScreen() {
             </Pressable>
           ))}
           {result.identification.title && (
-            <Button variant="secondary" label="None of these: use what was read" onPress={() => chooseIdentification(result.identification)} />
+            <Button variant="secondary" label="None of these, use the name I read" onPress={() => chooseIdentification(result.identification)} />
           )}
         </View>
       )}

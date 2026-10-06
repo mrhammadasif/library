@@ -12,10 +12,10 @@ export default function ArchiveScreen() {
   const books = useArchivedBooks(library.id)
   const list = books.data ?? []
   return (
-    <Screen header={<Header title="Archive" subtitle="Donated, lost and discarded books" />} refreshing={books.isRefetching} onRefresh={books.refetch}>
+    <Screen header={<Header title="Given away" subtitle="Books that left the shelves" />} refreshing={books.isRefetching} onRefresh={books.refetch}>
       {books.isPending && <Loading />}
       {books.error && <ErrorState error={books.error} onRetry={books.refetch} />}
-      {books.data && list.length === 0 && <Empty text="The archive is empty." />}
+      {books.data && list.length === 0 && <Empty text="🎁 Nothing given away yet." />}
       {list.length > 0 && (
         <Card>
           {list.map((book, i) => (

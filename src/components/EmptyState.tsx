@@ -10,13 +10,13 @@ export function Loading() {
   )
 }
 
-export function ErrorState({ error, onRetry, title = 'Couldn\'t load this' }: { error: unknown, onRetry: () => void, title?: string }) {
+export function ErrorState({ error, onRetry, title = 'Oops, that didn\'t load' }: { error: unknown, onRetry: () => void, title?: string }) {
   return (
     <View className="items-center gap-3 rounded-2xl border border-line bg-card p-6">
       <Text className="text-base font-bold text-ink">{title}</Text>
       <Text className="text-center text-sm text-muted">{errorMessage(error)}</Text>
-      <Pressable onPress={onRetry} className="rounded-full bg-walnut px-5 py-2.5">
-        <Text className="text-white">Retry</Text>
+      <Pressable onPress={onRetry} className="min-h-12 justify-center rounded-full bg-walnut px-6">
+        <Text className="text-base font-bold text-white">Try again</Text>
       </Pressable>
     </View>
   )
@@ -25,9 +25,9 @@ export function ErrorState({ error, onRetry, title = 'Couldn\'t load this' }: { 
 export function Empty({ text, action }: { text: string, action?: { label: string, onPress: () => void } }) {
   return (
     <View className="items-center gap-3 py-12">
-      <Text className="text-center text-base text-muted">{text}</Text>
+      <Text className="text-center text-lg text-muted">{text}</Text>
       {action && (
-        <Pressable onPress={action.onPress} className="rounded-full bg-primary px-5 py-2.5">
+        <Pressable onPress={action.onPress} className="min-h-12 justify-center rounded-full bg-primary px-6">
           <Text className="font-semibold text-white">{action.label}</Text>
         </Pressable>
       )}

@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
 import { AuthProvider, useAuth } from '~/auth/AuthProvider'
+import { ToastProvider } from '~/components/Toast'
 import { Colors } from '~/constants/Colors'
 import { LibraryProvider, useLibrary } from '~/library/LibraryProvider'
 
@@ -43,6 +44,7 @@ function RootStack() {
         <Stack.Screen name="shelf/[id]" />
         <Stack.Screen name="rack/[id]" />
         <Stack.Screen name="lend/[bookId]" options={SHEET} />
+        <Stack.Screen name="audit/play/[id]" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="move" options={SHEET} />
         <Stack.Screen name="donate" options={SHEET} />
         <Stack.Screen name="loans" />
@@ -71,8 +73,10 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <LibraryProvider>
-          <StatusBar style="dark" />
-          <RootStack />
+          <ToastProvider>
+            <StatusBar style="dark" />
+            <RootStack />
+          </ToastProvider>
         </LibraryProvider>
       </AuthProvider>
     </QueryClientProvider>

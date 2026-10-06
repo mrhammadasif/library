@@ -107,7 +107,7 @@ export default function AiSettingsScreen() {
   }
 
   return (
-    <Screen header={<Header title="AI & cover recognition" subtitle={library.name} />}>
+    <Screen header={<Header title="Smart helpers (AI)" subtitle={library.name} />}>
       {providers.isPending && <Loading />}
       {providers.error && <ErrorState error={providers.error} onRetry={providers.refetch} />}
       {providers.data && (

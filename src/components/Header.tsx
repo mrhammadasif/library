@@ -19,13 +19,15 @@ export function Header({ title, subtitle, right, close = false }: IHeaderProps) 
       <Pressable
         hitSlop={10}
         onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-        className="h-10 w-10 items-center justify-center rounded-xl border border-line bg-card"
+        accessibilityRole="button"
+        accessibilityLabel={close ? 'Close' : 'Back'}
+        className="h-12 w-12 items-center justify-center rounded-2xl border-2 border-line bg-card"
       >
-        <Feather name={close ? 'x' : 'chevron-left'} size={22} color={Colors.ink} />
+        <Feather name={close ? 'x' : 'chevron-left'} size={26} color={Colors.ink} />
       </Pressable>
       <View className="flex-1">
-        <Text className="text-xl font-bold text-ink" numberOfLines={1}>{title}</Text>
-        {subtitle && <Text className="text-sm text-muted" numberOfLines={1}>{subtitle}</Text>}
+        <Text className="text-2xl font-bold text-ink" numberOfLines={1}>{title}</Text>
+        {subtitle && <Text className="text-base text-muted" numberOfLines={1}>{subtitle}</Text>}
       </View>
       {right}
     </View>

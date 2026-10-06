@@ -14,9 +14,11 @@ import { useDeleteRack, useRacks, useReorderShelves, useSaveRack, useSaveShelf }
 import { useCan, useCurrentLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
 
-/** A rack's shelves: open, add, rename the rack, and sort shelves top-to-bottom. */
+const SUGGESTED = ['Top shelf', 'Middle shelf', 'Bottom shelf']
+
+/** A bookcase's shelves: open, add (one tap for the usual names), rename, and sort top-to-bottom. */
 export default function RackScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>()
+  const { id, isNew } = useLocalSearchParams<{ id: string, isNew?: string }>()
   const { library } = useCurrentLibrary()
   const racks = useRacks(library.id)
   const canManage = useCan('shelves.manage')
@@ -25,11 +27,12 @@ export default function RackScreen() {
   const saveShelf = useSaveShelf()
   const reorder = useReorderShelves(library.id)
   const [newShelf, setNewShelf] = useState<string | null>(null)
+  const [adding, setAdding] = useState<string | null>(null)
   const [rename, setRename] = useState<string | null>(null)
   const rack = racks.data?.find(r => r.id === id)
 
   if (!rack) {
-    return <Screen header={<Header title="Rack" />}>{racks.isPending ? <Loading /> : <Empty text="This rack was deleted." />}</Screen>
+    return <Screen header={<Header title="Bookcase" />}>{racks.isPending ? <Loading /> : <Empty text="This bookcase was deleted." />}</Screen>
   }
 
   function shift(shelves: IShelf[], index: number, delta: number) {
@@ -40,7 +43,7 @@ export default function RackScreen() {
   }
 
   function confirmDelete() {
-    Alert.alert(`Delete "${rack!.name}"?`, 'Its shelves are deleted too. Racks with books on them can\'t be deleted.', [
+    Alert.alert(`Delete "${rack!.name}"?`, 'Its shelves go too. Bookcases with books on them can\'t be deleted: move the books first.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteRack.mutate(rack!.id, { onSuccess: () => router.back() }) },
     ])
@@ -48,23 +51,43 @@ export default function RackScreen() {
 
   const error = saveRack.error ?? deleteRack.error ?? saveShelf.error ?? reorder.error
   return (
-    <Screen header={<Header title={rack.name} subtitle={rack.notes ?? `${rack.shelves.length} shelves`} />}>
-      {rack.shelves.length === 0 && <Empty text="No shelves in this rack yet." />}
+    <Screen header={<Header title={rack.name} subtitle={`📚 Bookcase · ${rack.shelves.length} shelves`} />}>
+      {rack.shelves.length === 0 && (
+        <Text className="text-lg text-ink">{isNew ? '🎉 Bookcase added! Now add its shelves, top to bottom.' : 'No shelves here yet. Add them top to bottom.'}</Text>
+      )}
+      {canManage && SUGGESTED.some(n => !rack.shelves.some(s => s.name === n)) && rack.shelves.length < 3 && (
+        <View className="flex-row flex-wrap gap-2">
+          {SUGGESTED.filter(n => !rack.shelves.some(s => s.name === n)).map(name => (
+            <Button
+              key={name}
+              small
+              variant="secondary"
+              icon="plus"
+              label={name}
+              loading={adding === name}
+              onPress={() => {
+                setAdding(name)
+                saveShelf.mutate({ libraryId: library.id, rackId: rack.id, name }, { onSettled: () => setAdding(null) })
+              }}
+            />
+          ))}
+        </View>
+      )}
       {rack.shelves.length > 0 && (
         <Card>
           {rack.shelves.map((shelf, index, all) => (
             <View key={shelf.id} className={`flex-row items-center gap-2 py-3 ${index < all.length - 1 ? 'border-b border-line' : ''}`}>
               <Pressable className="flex-1" onPress={() => router.push({ pathname: '/shelf/[id]', params: { id: shelf.id } })}>
-                <Text className="text-base font-semibold text-ink">{shelf.name}</Text>
-                <Text className="text-sm text-muted">{shelf.bookCount} books</Text>
+                <Text className="text-lg font-semibold text-ink">{shelf.name}</Text>
+                <Text className="text-base text-muted">{shelf.bookCount} books</Text>
               </Pressable>
               {canManage && (
                 <>
-                  <Pressable hitSlop={6} disabled={index === 0} onPress={() => shift(all, index, -1)} className="p-2">
-                    <Feather name="arrow-up" size={20} color={index === 0 ? Colors.line : Colors.ink} />
+                  <Pressable accessibilityLabel="Move up" hitSlop={6} disabled={index === 0} onPress={() => shift(all, index, -1)} className="h-11 w-11 items-center justify-center">
+                    <Feather name="arrow-up" size={24} color={index === 0 ? Colors.line : Colors.ink} />
                   </Pressable>
-                  <Pressable hitSlop={6} disabled={index === all.length - 1} onPress={() => shift(all, index, 1)} className="p-2">
-                    <Feather name="arrow-down" size={20} color={index === all.length - 1 ? Colors.line : Colors.ink} />
+                  <Pressable accessibilityLabel="Move down" hitSlop={6} disabled={index === all.length - 1} onPress={() => shift(all, index, 1)} className="h-11 w-11 items-center justify-center">
+                    <Feather name="arrow-down" size={24} color={index === all.length - 1 ? Colors.line : Colors.ink} />
                   </Pressable>
                 </>
               )}
@@ -74,10 +97,10 @@ export default function RackScreen() {
       )}
 
       {canManage && (newShelf === null
-        ? <Button icon="plus" label="Add a shelf" onPress={() => setNewShelf(`Shelf ${rack.shelves.length + 1}`)} />
+        ? <Button variant="secondary" icon="plus" label="Add a shelf with another name" onPress={() => setNewShelf('')} />
         : (
             <Card className="gap-3 py-4">
-              <Field label="Shelf name" value={newShelf} onChangeText={setNewShelf} autoFocus selectTextOnFocus />
+              <Field label="Shelf name" value={newShelf} onChangeText={setNewShelf} placeholder="e.g. Picture books" autoFocus />
               <View className="flex-row gap-3">
                 <View className="flex-1"><Button variant="secondary" label="Cancel" onPress={() => setNewShelf(null)} /></View>
                 <View className="flex-1">
@@ -95,13 +118,13 @@ export default function RackScreen() {
       {canManage && (rename === null
         ? (
             <View className="flex-row gap-3">
-              <View className="flex-1"><Button variant="secondary" icon="edit-3" label="Rename rack" onPress={() => setRename(rack.name)} /></View>
-              <View className="flex-1"><Button variant="danger" icon="trash-2" label="Delete rack" onPress={confirmDelete} /></View>
+              <View className="flex-1"><Button variant="secondary" icon="edit-3" label="Rename" onPress={() => setRename(rack.name)} /></View>
+              <View className="flex-1"><Button variant="danger" icon="trash-2" label="Delete" onPress={confirmDelete} /></View>
             </View>
           )
         : (
             <Card className="gap-3 py-4">
-              <Field label="Rack name" value={rename} onChangeText={setRename} autoFocus />
+              <Field label="Bookcase name" value={rename} onChangeText={setRename} autoFocus />
               <Button
                 label="Save"
                 loading={saveRack.isPending}

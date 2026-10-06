@@ -17,6 +17,7 @@ export default function InviteScreen() {
   const current = useCurrentLibrary()
   const create = useCreateInvite()
   const [permissions, setPermissions] = useState<Permission[]>(['loans.manage'])
+  // Defaults to the Reader preset: the most common invite is a family member who borrows books.
   const [days, setDays] = useState(7)
   const [maxUses, setMaxUses] = useState(1)
 
@@ -37,7 +38,7 @@ export default function InviteScreen() {
   return (
     <Screen>
       <Text className="pt-4 text-2xl font-bold text-ink">Invite someone</Text>
-      <Text className="text-sm font-semibold text-muted">What can they do?</Text>
+      <Text className="text-lg font-bold text-ink">What can they do?</Text>
       <PermissionEditor value={permissions} onChange={setPermissions} grantable={current.permissions} />
       <View className="gap-2">
         <Text className="text-sm font-semibold text-muted">Code expires in</Text>

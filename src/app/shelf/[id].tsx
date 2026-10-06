@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Alert, Text, View } from 'react-native'
-import { BookRow } from '~/components/BookRow'
+import { BookGrid } from '~/components/BookGrid'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
 import { Empty, ErrorState, Loading } from '~/components/EmptyState'
@@ -45,7 +45,7 @@ export default function ShelfScreen() {
   }
 
   function confirmDelete() {
-    Alert.alert(`Delete "${shelf?.name}"?`, 'Only empty shelves can be deleted.', [
+    Alert.alert(`Delete "${shelf?.name}"?`, 'Only empty shelves can be deleted: move the books first.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteShelf.mutate(id, { onSuccess: () => router.back() }) },
     ])
@@ -57,7 +57,7 @@ export default function ShelfScreen() {
       header={(
         <Header
           title={shelf?.name ?? 'Shelf'}
-          subtitle={rack ? `${rack.name} · ${list.length} books${away ? ` · ${away} away` : ''}` : undefined}
+          subtitle={rack ? `📚 ${rack.name} · ${list.length} books${away ? ` · ${away} away` : ''}` : undefined}
           right={(canMove || canArchive) && list.length > 0 && (
             <Button small variant="secondary" label={selected ? 'Cancel' : 'Select'} onPress={() => setSelected(selected ? null : new Set())} />
           )}
@@ -72,30 +72,19 @@ export default function ShelfScreen() {
             <View className="flex-1"><Button icon="shuffle" label={`Move ${selected.size}`} onPress={() => router.push({ pathname: '/move', params: { ids, from: id } })} /></View>
           )}
           {canArchive && (
-            <View className="flex-1"><Button variant="secondary" icon="gift" label={`Donate ${selected.size}`} onPress={() => router.push({ pathname: '/donate', params: { ids } })} /></View>
+            <View className="flex-1"><Button variant="secondary" icon="gift" label={`Give away ${selected.size}`} onPress={() => router.push({ pathname: '/donate', params: { ids } })} /></View>
           )}
         </View>
       )}
 
       {books.isPending && <Loading />}
       {books.error && <ErrorState error={books.error} onRetry={books.refetch} />}
-      {books.data && list.length === 0 && <Empty text="No books on this shelf yet." />}
-      {list.length > 0 && (
-        <Card>
-          {list.map((book, i) => (
-            <BookRow
-              key={book.id}
-              book={book}
-              last={i === list.length - 1}
-              selected={selected?.has(book.id)}
-              onToggle={selected ? () => toggle(book.id) : undefined}
-            />
-          ))}
-        </Card>
-      )}
+      {books.data && list.length === 0 && <Empty text="📭 Nothing on this shelf yet." />}
+      {selected && <Text className="text-base text-muted">Tap the books you want to move or give away.</Text>}
+      {list.length > 0 && <BookGrid books={list} selected={selected} onToggle={toggle} />}
 
       {canAudit && list.length > 0 && !selected && (
-        <Button variant="secondary" icon="check-square" label="Audit this shelf" onPress={() => router.push({ pathname: '/audit', params: { shelf: id } })} />
+        <Button variant="secondary" icon="check-square" label="Check this shelf" onPress={() => router.push({ pathname: '/audit', params: { shelf: id } })} />
       )}
 
       {canManage && shelf && !selected && (rename === null

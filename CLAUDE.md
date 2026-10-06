@@ -54,6 +54,20 @@ Vault, Edge Functions). Sibling of `~/projects/financy`; configs and UI kit were
   Release APK: `npm run build:preview` (clears Metro cache, local EAS build, `scripts/check-apk.sh`).
 - `.env.local` (gitignored, bundled via `.easignore` for local builds): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_KEY`.
 
+## UX conventions (kid-friendly: "a 6-year-old can use it")
+- **Pictures first**: books appear as covers (`BookTile`/`BookGrid`, shelves as cover rows on a "plank"); emoji label big actions.
+- **Plain words**, never jargon in UI: Bookcase (not rack), Book check (not audit; random = "Quick check", shelf = "Check a whole
+  shelf"), Given away (not archive/donate), Borrowed / It's back! (not lend/return). DB/RPC names stay technical.
+  Permission labels + presets (Editor, Reader, Helper, Checker, Viewer) live in `constants/Permissions.ts`.
+- **One obvious action per screen**: a single `Button big` for the main step; secondary actions smaller; rare fields behind
+  `Collapsible` ("More details"). Add-book = cover hero → shelf (`ShelfChoice` remembers the last one) → colour → "Put it on the shelf".
+- **Scan does everything**: the centre Scan button is shown to everyone; a known ISBN shows where it lives + one-tap
+  "I'm borrowing it" / "I'm giving it back" / "I found it!"; unknown → add form (or "ask someone" without books.add).
+- **Always confirm success** with `useToast()` (big toast + success haptic), e.g. "📚 Added to Living room · Top shelf".
+- **Touch & text sizes**: tappables ≥ 44–56px (`min-h-11/12/14`), body text ≥ `text-base`, titles `text-2xl/3xl`; icon-only
+  buttons need `accessibilityLabel`. Quick check is a game (`audit/play/[id]`): one book at a time, answers applied locally first.
+- Lint allows apostrophes in JSX text (`react/no-unescaped-entities` forbids only `>` and `}`).
+
 ## Gotchas (inherited from financy)
 - NativeWind v5 rc: `className` only on core RN components (use `SafeArea`), `/NN` opacity modifiers don't render (use hex alpha).
 - `lightningcss` pinned to 1.30.1 via `overrides`. `app.config.js` stays plain JS (older eas-cli + TS 6).

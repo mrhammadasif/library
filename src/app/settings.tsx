@@ -47,7 +47,7 @@ export default function SettingsScreen() {
   const error = rename.error ?? remove.error ?? leave.error ?? updateName.error
   return (
     <Screen header={<Header title="Settings" />}>
-      <SettingsCard title="Libraries">
+      <SettingsCard title="Your libraries">
         {memberships.map(m => (
           <SettingsRow
             key={m.library.id}
@@ -64,14 +64,14 @@ export default function SettingsScreen() {
       </SettingsCard>
 
       <SettingsCard title={library.name}>
-        <SettingsRow icon="users" label="Members" hint={canMembers ? 'Invite people and set permissions' : 'Who has access'} onPress={() => router.push('/members')} />
-        <SettingsRow icon="repeat" label="Lent out" onPress={() => router.push('/loans')} />
-        <SettingsRow icon="archive" label="Archive" hint="Donated and archived books" onPress={() => router.push('/archive')} />
-        <SettingsRow icon="check-square" label="Audits" onPress={() => router.push('/audit')} />
+        <SettingsRow icon="users" label="Members" hint={canMembers ? 'Invite family and choose what they can do' : 'Who uses this library'} onPress={() => router.push('/members')} />
+        <SettingsRow icon="book-open" label="Borrowed books" onPress={() => router.push('/loans')} />
+        <SettingsRow icon="gift" label="Given away" hint="Books that left the shelves" onPress={() => router.push('/archive')} />
+        <SettingsRow icon="check-square" label="Book checks" onPress={() => router.push('/audit')} />
         <SettingsRow
           icon="cpu"
-          label="AI & cover recognition"
-          hint={[library.enrichProvider && 'Suggestions on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || 'Off'}
+          label="Smart helpers (AI)"
+          hint={[library.enrichProvider && 'Tag ideas on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
           onPress={canAi ? () => router.push('/ai-settings') : undefined}
           last
         />

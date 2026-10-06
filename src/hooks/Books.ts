@@ -156,3 +156,29 @@ export function useMarkFound() {
     unwrap(await getSupabase().rpc('mark_book_found', { p_book: bookId, p_shelf: shelfId ?? null }))
   })
 }
+
+/** Every book that lives on a shelf (not given away), for the visual bookcases. Grouped by shelf id. */
+export function useBooksByShelf(libraryId: string) {
+  return useQuery({
+    queryKey: ['books', libraryId, 'by-shelf'],
+    staleTime: 30_000,
+    queryFn: async (): Promise<Map<string, IBook[]>> => {
+      const rows = unwrap(await getSupabase().from('books').select(BOOK_COLUMNS)
+        .eq('library_id', libraryId).neq('status', 'archived').order('title'))
+      const byShelf = new Map<string, IBook[]>()
+      for (const book of (rows as unknown as IBookRow[]).map(toBook)) {
+        const list = byShelf.get(book.shelfId!) ?? []
+        list.push(book)
+        byShelf.set(book.shelfId!, list)
+      }
+      return byShelf
+    },
+  })
+}
+
+/** Copies of a scanned ISBN already in the library; given-away copies last. */
+export async function findCopies(libraryId: string, isbn13: string): Promise<IBook[]> {
+  const rows = unwrap(await getSupabase().from('books').select(BOOK_COLUMNS)
+    .eq('library_id', libraryId).eq('isbn13', isbn13).order('created_at'))
+  return (rows as unknown as IBookRow[]).map(toBook).sort((a, b) => Number(a.status === 'archived') - Number(b.status === 'archived'))
+}

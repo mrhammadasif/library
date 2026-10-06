@@ -56,7 +56,8 @@ describe('supabaseMapper', () => {
   })
 
   it('describes permission sets by preset', () => {
-    expect(describePermissions(['loans.manage'])).toBe('Lender')
+    expect(describePermissions(['loans.manage'])).toBe('Reader')
+    expect(describePermissions(['audits.run', 'loans.manage'])).toBe('Helper')
     expect(describePermissions([])).toBe('Viewer')
     expect(describePermissions(['books.add'])).toBe('Add books')
     expect(describePermissions(['books.add', 'books.move'])).toBe('2 permissions')

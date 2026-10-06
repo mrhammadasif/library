@@ -29,7 +29,7 @@ describe('dates', () => {
 
 describe('errors', () => {
   it('names the missing permission', () => {
-    expect(errorMessage({ code: '42501', hint: 'loans.manage', message: 'x' })).toBe('You need the "Lend & return" permission for this.')
+    expect(errorMessage({ code: '42501', hint: 'loans.manage', message: 'x' })).toBe('You need the "Borrow & give back" permission for this.')
     expect(errorMessage({ code: '42501', message: 'x' })).toBe('You don\'t have permission to do this.')
     expect(errorMessage({ code: '23503', message: 'fk' })).toContain('still in use')
     expect(errorMessage(new Error('boom'))).toBe('boom')

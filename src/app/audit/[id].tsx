@@ -17,11 +17,11 @@ import { Colors } from '~/constants/Colors'
 import { errorMessage } from '~/utils/Errors'
 
 const RESULT_LABEL: Record<AuditResult, { text: string, className: string }> = {
-  pending: { text: 'Not checked', className: 'text-faint' },
+  pending: { text: 'Not checked yet', className: 'text-faint' },
   found: { text: 'Found', className: 'text-positive' },
   missing: { text: 'Missing', className: 'text-negative' },
-  misplaced: { text: 'On the wrong shelf', className: 'text-warn' },
-  unexpected: { text: 'Not expected here', className: 'text-warn' },
+  misplaced: { text: 'On another shelf', className: 'text-warn' },
+  unexpected: { text: 'Doesn\'t belong here', className: 'text-warn' },
 }
 
 function ItemCard({ item, shelfName, open, onRecord, canMove, misplacing, setMisplacing }: {
@@ -54,7 +54,7 @@ function ItemCard({ item, shelfName, open, onRecord, canMove, misplacing, setMis
         <View className="flex-row gap-2">
           <View className="flex-1"><Button small label="Found" icon="check" onPress={() => onRecord('found')} /></View>
           <View className="flex-1"><Button small variant="danger" label="Missing" onPress={() => onRecord('missing')} /></View>
-          <View className="flex-1"><Button small variant="secondary" label="Elsewhere" onPress={() => setMisplacing(true)} /></View>
+          <View className="flex-1"><Button small variant="secondary" label="Other shelf" onPress={() => setMisplacing(true)} /></View>
         </View>
       )}
       {open && misplacing && racks.data && (
@@ -107,8 +107,8 @@ export default function AuditScreen() {
       onSuccess: (r) => {
         const title = items.find(i => i.id === r.item_id)?.bookTitle
         setLastScan(r.result === 'found'
-          ? `✓ ${title ?? isbn}${r.already ? ' (already counted)' : ''}`
-          : r.book_id ? `⚠ ${isbn} belongs on another shelf` : `⚠ ${isbn} isn't in the library`)
+          ? `✅ ${title ?? isbn}${r.already ? ' (already counted)' : ''}`
+          : r.book_id ? '📍 That one belongs on another shelf' : '🤔 That book isn\'t in the library')
       },
     })
   }
@@ -117,8 +117,8 @@ export default function AuditScreen() {
     <Screen
       header={(
         <Header
-          title={a.mode === 'shelf' ? `Inventory: ${shelfName(a.shelfId)}` : 'Random check'}
-          subtitle={a.completedAt ? 'Completed' : `${done} of ${expected.length} checked`}
+          title={a.mode === 'shelf' ? `🔦 ${shelfName(a.shelfId)}` : '🎲 Quick check'}
+          subtitle={a.completedAt ? 'Finished' : `${done} of ${expected.length} checked`}
         />
       )}
     >
@@ -128,7 +128,7 @@ export default function AuditScreen() {
 
       {a.completedAt && (
         <Card className="gap-1 py-4">
-          <Text className="text-lg font-bold text-ink">Audit complete</Text>
+          <Text className="text-xl font-bold text-ink">Check finished 🎉</Text>
           <Text className="text-base text-muted">
             {a.counts.found} found · {a.counts.misplaced} on the wrong shelf · {a.counts.missing} missing
             {a.counts.unexpected ? ` · ${a.counts.unexpected} unexpected` : ''}
@@ -143,18 +143,18 @@ export default function AuditScreen() {
                 <View className="h-72 overflow-hidden rounded-3xl">
                   <BarcodeScanner onIsbn={onIsbn} paused={scan.isPending} hint="Scan each book on the shelf" />
                 </View>
-                {lastScan && <Text className="text-center text-base text-ink">{lastScan}</Text>}
+                {lastScan && <Text className="text-center text-xl font-bold text-ink">{lastScan}</Text>}
                 <Button small variant="secondary" label="Stop scanning" onPress={() => setScanning(false)} />
               </View>
             )
-          : <Button icon="maximize" label="Scan books on this shelf" onPress={() => setScanning(true)} />
+          : <Button big icon="maximize" label="Scan the books on this shelf" onPress={() => setScanning(true)} />
       )}
 
       {error && <Text className="text-center text-sm text-negative">{errorMessage(error)}</Text>}
 
       {pending.length > 0 && (
         <View className="gap-3">
-          <Text className="text-sm font-semibold uppercase tracking-wider text-faint">To check ({pending.length})</Text>
+          <Text className="text-lg font-bold text-ink">Still to find ({pending.length})</Text>
           {pending.map(item => (
             <ItemCard
               key={item.id}
@@ -175,7 +175,7 @@ export default function AuditScreen() {
 
       {others.length > 0 && (
         <View className="gap-3">
-          <Text className="text-sm font-semibold uppercase tracking-wider text-faint">Checked ({others.length})</Text>
+          <Text className="text-lg font-bold text-ink">Checked ({others.length})</Text>
           {others.map(item => (
             <ItemCard
               key={item.id}
@@ -195,10 +195,10 @@ export default function AuditScreen() {
         <View className="gap-2">
           {pending.length > 0 && (
             <Text className="text-center text-sm" style={{ color: Colors.muted }}>
-              Completing marks the {pending.length} unchecked books as missing.
+              Finishing marks the {pending.length} books you didn't find as missing.
             </Text>
           )}
-          <Button label="Complete audit" icon="flag" loading={complete.isPending} onPress={() => complete.mutate(id)} />
+          <Button label="Finish check" icon="flag" loading={complete.isPending} onPress={() => complete.mutate(id)} />
         </View>
       )}
     </Screen>

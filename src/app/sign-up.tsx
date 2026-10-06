@@ -54,7 +54,7 @@ export default function SignUpScreen() {
                 <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
                 <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
                 {error && <Text className="text-center text-sm text-negative">{error}</Text>}
-                <Button label="Create account" onPress={onSubmit} loading={busy} disabled={!name.trim() || !email || !password} />
+                <Button big label="Create account" onPress={onSubmit} loading={busy} disabled={!name.trim() || !email || !password} />
               </>
             )}
       </KeyboardAvoidingView>

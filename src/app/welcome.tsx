@@ -4,6 +4,7 @@ import { Text, View } from 'react-native'
 import { useAuth } from '~/auth/AuthProvider'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
+import { Chip } from '~/components/Chip'
 import { Field } from '~/components/Field'
 import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
@@ -46,8 +47,11 @@ export default function WelcomeScreen() {
           )}
     >
       <Card className="gap-3 py-4">
-        <Text className="text-lg font-bold text-ink">Start a library</Text>
-        <Field label="Name" value={name} onChangeText={setName} placeholder="e.g. Home, Office" />
+        <Text className="text-xl font-bold text-ink">📚 Start a library</Text>
+        <Field label="What should we call it?" value={name} onChangeText={setName} placeholder="e.g. Home" />
+        <View className="flex-row flex-wrap gap-2">
+          {['Home', 'Family', 'Kids', 'Office'].map(n => <Chip key={n} label={n} selected={name === n} onPress={() => setName(n)} />)}
+        </View>
         {create.error && <Text className="text-sm text-negative">{errorMessage(create.error)}</Text>}
         <Button
           label="Create library"
@@ -58,7 +62,8 @@ export default function WelcomeScreen() {
         />
       </Card>
       <Card className="gap-3 py-4">
-        <Text className="text-lg font-bold text-ink">Join with a code</Text>
+        <Text className="text-xl font-bold text-ink">🔑 Join with a code</Text>
+        <Text className="text-base text-muted">Got a code from family? Type it here.</Text>
         <Field label="Invite code" value={code} onChangeText={setCode} autoCapitalize="characters" placeholder="ABCD2345" />
         {join.error && <Text className="text-sm text-negative">{errorMessage(join.error)}</Text>}
         <Button

@@ -20,18 +20,18 @@ export function useRacks(libraryId: string) {
   })
 }
 
-/** shelfId → "Rack › Shelf" label, for book rows and pickers. */
+/** shelfId → "Bookcase · Shelf" label, for book rows and pickers. */
 export function shelfLabels(racks: IRack[] | undefined): Map<string, string> {
   const labels = new Map<string, string>()
   for (const rack of racks ?? []) {
     for (const shelf of rack.shelves) {
-      labels.set(shelf.id, `${rack.name} › ${shelf.name}`)
+      labels.set(shelf.id, `${rack.name} · ${shelf.name}`)
     }
   }
   return labels
 }
 
-function useRackMutation<TArgs>(fn: (args: TArgs) => Promise<void>) {
+function useRackMutation<TArgs, TResult = void>(fn: (args: TArgs) => Promise<TResult>) {
   const client = useQueryClient()
   return useMutation({
     mutationFn: fn,
@@ -39,12 +39,16 @@ function useRackMutation<TArgs>(fn: (args: TArgs) => Promise<void>) {
   })
 }
 
+/** Creates or renames a bookcase; resolves to its id. */
 export function useSaveRack() {
   return useRackMutation(async ({ libraryId, id, name, notes }: { libraryId: string, id?: string, name: string, notes?: string | null }) => {
     const db = getSupabase().from('racks')
-    unwrap(id
-      ? await db.update({ name: name.trim(), notes: notes ?? null }).eq('id', id)
-      : await db.insert({ library_id: libraryId, name: name.trim(), notes: notes ?? null }))
+    if (id) {
+      unwrap(await db.update({ name: name.trim(), notes: notes ?? null }).eq('id', id))
+      return id
+    }
+    const row = unwrap(await db.insert({ library_id: libraryId, name: name.trim(), notes: notes ?? null }).select('id').single())
+    return (row as unknown as { id: string }).id
   })
 }
 

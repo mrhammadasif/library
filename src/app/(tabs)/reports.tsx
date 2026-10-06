@@ -27,7 +27,7 @@ function monthSeries(rows: { month: string, books: number }[]) {
 function Section({ title, children }: { title: string, children: React.ReactNode }) {
   return (
     <Card className="gap-4 py-4">
-      <Text className="text-lg font-bold text-ink">{title}</Text>
+      <Text className="text-xl font-bold text-ink">{title}</Text>
       {children}
     </Card>
   )
@@ -43,7 +43,7 @@ export default function ReportsScreen() {
   if (stats.isPending || stats.error) {
     return (
       <Screen tabs>
-        <Text className="pt-2 text-3xl font-bold text-ink">Reports</Text>
+        <Text className="pt-3 text-3xl font-bold text-ink">Stats</Text>
         {stats.isPending ? <Loading /> : <ErrorState error={stats.error} onRetry={stats.refetch} />}
       </Screen>
     )
@@ -55,7 +55,7 @@ export default function ReportsScreen() {
 
   return (
     <Screen tabs refreshing={stats.isRefetching} onRefresh={stats.refetch}>
-      <Text className="pt-2 text-3xl font-bold text-ink">Reports</Text>
+      <Text className="pt-3 text-3xl font-bold text-ink">Stats</Text>
 
       <View className="gap-3">
         <View className="flex-row gap-3">
@@ -64,17 +64,17 @@ export default function ReportsScreen() {
           <StatTile label="Pages" value={s.pages.toLocaleString()} />
         </View>
         <View className="flex-row gap-3">
-          <StatTile label="On shelves" value={s.by_status.on_shelf ?? 0} tone="positive" />
-          <StatTile label="Lent out" value={s.by_status.borrowed ?? 0} tone={s.loans.overdue ? 'warn' : 'ink'} />
+          <StatTile label="At home" value={s.by_status.on_shelf ?? 0} tone="positive" />
+          <StatTile label="Borrowed" value={s.by_status.borrowed ?? 0} tone={s.loans.overdue ? 'warn' : 'ink'} />
           <StatTile label="Missing" value={s.by_status.missing ?? 0} tone={s.by_status.missing ? 'negative' : 'ink'} />
         </View>
         <View className="flex-row gap-3">
-          <StatTile label="Overdue loans" value={s.loans.overdue} tone={s.loans.overdue ? 'warn' : 'ink'} />
-          <StatTile label="Donated / archived" value={s.archived} />
+          <StatTile label="Late back" value={s.loans.overdue} tone={s.loans.overdue ? 'warn' : 'ink'} />
+          <StatTile label="Given away" value={s.archived} />
         </View>
       </View>
 
-      <Section title="Books added, last 12 months">
+      <Section title="📈 Books added this year">
         <BarChart
           data={months}
           width={chartWidth}
@@ -97,46 +97,46 @@ export default function ReportsScreen() {
       </Section>
 
       {s.racks.length > 0 && (
-        <Section title="Books per rack">
+        <Section title="📚 Books in each bookcase">
           <HBars bars={s.racks.map(r => ({ label: r.name, value: r.books }))} />
         </Section>
       )}
 
       {s.top_categories.length > 0 && (
-        <Section title="Top categories">
+        <Section title="🏷️ Favourite kinds of books">
           <HBars bars={s.top_categories.map(c => ({ label: c.name, value: c.books }))} />
         </Section>
       )}
 
       {s.top_authors.length > 0 && (
-        <Section title="Most collected authors">
+        <Section title="✍️ Favourite authors">
           <HBars bars={s.top_authors.map(a => ({ label: a.name, value: a.books }))} />
         </Section>
       )}
 
       {s.colors.length > 0 && (
-        <Section title="Shelf colours">
+        <Section title="🎨 Book colours">
           <HBars bars={s.colors.map(c => ({ label: swatch(c.color)?.label ?? c.color, value: c.books, color: swatch(c.color)?.swatch }))} />
         </Section>
       )}
 
       {s.decades.length > 0 && (
-        <Section title="Published by decade">
+        <Section title="🕰️ When they were written">
           <HBars bars={s.decades.map(d => ({ label: `${d.decade}s`, value: d.books }))} />
         </Section>
       )}
 
-      <Section title="Audits">
+      <Section title="✅ Book checks">
         {last
           ? (
               <Text className="text-base text-ink">
-                Last audit {formatDate(last.completed_at)}: {last.found} of {last.total} found
+                Last check {formatDate(last.completed_at)}: {last.found} of {last.total} found
                 {last.missing ? `, ${last.missing} missing` : ''}.
               </Text>
             )
-          : <Text className="text-base text-muted">No audits yet.</Text>}
-        <Text className="text-sm text-muted">{`${s.audit.unseen_year} books haven't been seen in over a year.`}</Text>
-        {canAudit && <Button variant="secondary" icon="check-square" label="Run an audit" onPress={() => router.push('/audit')} />}
+          : <Text className="text-base text-muted">No book checks yet.</Text>}
+        <Text className="text-sm text-muted">{`${s.audit.unseen_year} books haven't been checked in over a year.`}</Text>
+        {canAudit && <Button variant="secondary" icon="check-square" label="Do a book check" onPress={() => router.push('/audit')} />}
       </Section>
     </Screen>
   )

@@ -20,23 +20,23 @@ function describe(event: IBookEvent, shelfName: (id: string | null) => string): 
   const p = event.payload
   switch (event.type) {
     case 'created':
-      return `Added to ${shelfName(event.toShelfId)}`
+      return `📚 Added to ${shelfName(event.toShelfId)}`
     case 'moved':
-      return `Moved from ${shelfName(event.fromShelfId)} to ${shelfName(event.toShelfId)}`
+      return `🚚 Moved to ${shelfName(event.toShelfId)}`
     case 'lent':
-      return `Lent to ${String(p.borrower ?? 'someone')}`
+      return `📖 Borrowed by ${String(p.borrower ?? 'someone')}`
     case 'returned':
-      return `Returned to ${shelfName(event.toShelfId)}`
+      return `🏠 Came back to ${shelfName(event.toShelfId)}`
     case 'archived':
       return p.reason === 'donated'
-        ? `Donated${p.recipient ? ` to ${String(p.recipient)}` : ''}`
-        : `Archived (${String(p.reason ?? 'other')})`
+        ? `🎁 Given away${p.recipient ? ` to ${String(p.recipient)}` : ''}`
+        : `👋 Left the shelves (${String(p.reason ?? 'other')})`
     case 'restored':
-      return `Restored to ${shelfName(event.toShelfId)}`
+      return `↩️ Brought back to ${shelfName(event.toShelfId)}`
     case 'audited':
-      return `Audit: ${String(p.result ?? 'checked')}`
+      return p.result === 'missing' ? '❓ Not found in a book check' : '✅ Spotted in a book check'
     case 'marked_missing':
-      return 'Marked missing after an audit'
+      return '❓ Marked missing'
   }
 }
 
@@ -52,8 +52,8 @@ export function Timeline({ events, shelfName }: { events: IBookEvent[], shelfNam
             {i < events.length - 1 && <View className="w-px flex-1 bg-line" />}
           </View>
           <View className="flex-1 pb-4 pt-1">
-            <Text className="text-sm text-ink">{describe(event, shelfName)}</Text>
-            <Text className="text-xs text-faint">
+            <Text className="text-base text-ink">{describe(event, shelfName)}</Text>
+            <Text className="text-sm text-muted">
               {formatDate(event.at)}
               {event.actorName ? ` · ${event.actorName}` : ''}
             </Text>
