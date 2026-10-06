@@ -1,17 +1,4 @@
-export interface IShelf {
-  id: string
-  rackId: string
-  name: string
-  notes: string | null
-  position: number
-  /** Books whose home is this shelf (on the shelf, lent out or missing). */
-  bookCount: number
-}
+import type { IRackDto } from '~shared/contracts/Shelves'
 
-export interface IRack {
-  id: string
-  name: string
-  notes: string | null
-  position: number
-  shelves: IShelf[]
-}
+export type IRack = IRackDto
+export type IShelf = IRackDto['shelves'][number]

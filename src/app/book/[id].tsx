@@ -56,9 +56,9 @@ export default function BookScreen() {
   const { library } = useCurrentLibrary()
   const { user } = useAuth()
   const toast = useToast()
-  const book = useBook(id)
-  const events = useBookEvents(id)
-  const loans = useBookLoans(id)
+  const book = useBook(library.id, id)
+  const events = useBookEvents(library.id, id)
+  const loans = useBookLoans(library.id, id)
   const racks = useRacks(library.id)
   const labels = shelfLabels(racks.data)
   const lend = useLendBook()
@@ -94,7 +94,7 @@ export default function BookScreen() {
   function confirmDelete() {
     Alert.alert('Delete this book for good?', 'Its history goes too. To keep a record, choose “Give away” instead.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteBook.mutate(b.id, { onSuccess: () => router.back() }) },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteBook.mutate({ libraryId: library.id, id: b.id }, { onSuccess: () => router.back() }) },
     ])
   }
 
@@ -159,7 +159,7 @@ export default function BookScreen() {
               label="I'm borrowing it"
               loading={lend.isPending}
               onPress={() => lend.mutate(
-                { bookId: b.id, borrowerUserId: user!.id, dueAt: DateTime.now().plus({ days: 14 }).endOf('day').toISO() },
+                { libraryId: library.id, bookId: b.id, borrowerUserId: user!.id, dueAt: DateTime.now().plus({ days: 14 }).endOf('day').toISO() },
                 { onSuccess: () => toast('Enjoy the book! Back in 2 weeks', '📖') },
               )}
             />
@@ -172,14 +172,14 @@ export default function BookScreen() {
             icon="corner-down-left"
             label="It's back!"
             loading={returnBook.isPending}
-            onPress={() => returnBook.mutate({ bookId: b.id }, { onSuccess: () => toast(`Put it on ${shelfName(b.shelfId)}`, '📍') })}
+            onPress={() => returnBook.mutate({ libraryId: library.id, bookId: b.id }, { onSuccess: () => toast(`Put it on ${shelfName(b.shelfId)}`, '📍') })}
           />
         )}
         {b.status === 'borrowed' && can.lend && can.move && (
           <Button small variant="ghost" label="It goes on a different shelf now" onPress={() => router.push({ pathname: '/move', params: { ids: b.id, mode: 'return' } })} />
         )}
         {b.status === 'missing' && can.audit && (
-          <Button big icon="check" label="I found it!" loading={markFound.isPending} onPress={() => markFound.mutate({ bookId: b.id }, { onSuccess: () => toast('Found! Thank you', '🎉') })} />
+          <Button big icon="check" label="I found it!" loading={markFound.isPending} onPress={() => markFound.mutate({ libraryId: library.id, bookId: b.id }, { onSuccess: () => toast('Found! Thank you', '🎉') })} />
         )}
         {b.status === 'archived' && can.archive && (
           <Button big icon="rotate-ccw" label="Bring it back" onPress={() => router.push({ pathname: '/move', params: { ids: b.id, mode: 'restore' } })} />

@@ -1,59 +1,45 @@
-import type { IMembership } from '~/models/ILibrary'
+import type { IMe, IMembership } from '~/models/ILibrary'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getSupabase, unwrap } from '~/api/Supabase'
-import { toMembership } from '~/mappers/SupabaseMapper'
+import { api } from '~/api/Http'
 
 export const MEMBERSHIPS_KEY = ['memberships'] as const
+export const ME_KEY = ['me'] as const
 
 /** Every library the signed-in user belongs to, with their role and permissions. */
 export function useMemberships(userId: string | undefined) {
   return useQuery({
     queryKey: [...MEMBERSHIPS_KEY, userId],
     enabled: !!userId,
-    queryFn: async (): Promise<IMembership[]> => {
-      const rows = unwrap(await getSupabase().from('library_members')
-        .select('role, permissions, library:libraries(id, name, enrich_provider, vision_provider)')
-        .eq('user_id', userId!))
-      return (rows as unknown as Parameters<typeof toMembership>[0][])
-        .map(toMembership)
-        .filter((m): m is IMembership => m !== null)
-        .sort((a, b) => a.library.name.localeCompare(b.library.name))
-    },
+    queryFn: () => api.get<IMembership[]>('/libraries'),
   })
+}
+
+export function useMe(enabled = true) {
+  return useQuery({ queryKey: ME_KEY, enabled, queryFn: () => api.get<IMe>('/me') })
+}
+
+function useMembershipMutation<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>) {
+  const client = useQueryClient()
+  return useMutation({ mutationFn: fn, onSettled: () => client.invalidateQueries({ queryKey: MEMBERSHIPS_KEY }) })
 }
 
 export function useCreateLibrary() {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: async (name: string) => unwrap(await getSupabase().rpc('create_library', { p_name: name })) as string,
-    onSettled: () => client.invalidateQueries({ queryKey: MEMBERSHIPS_KEY }),
-  })
+  return useMembershipMutation(async (name: string) => (await api.post<{ id: string }>('/libraries', { name })).id)
 }
 
 export function useAcceptInvite() {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: async (code: string) => unwrap(await getSupabase().rpc('accept_invite', { p_code: code })) as string,
-    onSettled: () => client.invalidateQueries({ queryKey: MEMBERSHIPS_KEY }),
-  })
+  return useMembershipMutation(async (code: string) => (await api.post<{ libraryId: string }>('/invites/accept', { code })).libraryId)
 }
 
 export function useRenameLibrary() {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ libraryId, name }: { libraryId: string, name: string }) => {
-      unwrap(await getSupabase().from('libraries').update({ name: name.trim() }).eq('id', libraryId))
-    },
-    onSettled: () => client.invalidateQueries({ queryKey: MEMBERSHIPS_KEY }),
-  })
+  return useMembershipMutation(({ libraryId, name }: { libraryId: string, name: string }) => api.patch(`/libraries/${libraryId}`, { name }))
 }
 
 export function useDeleteLibrary() {
-  const client = useQueryClient()
-  return useMutation({
-    mutationFn: async (libraryId: string) => {
-      unwrap(await getSupabase().from('libraries').delete().eq('id', libraryId))
-    },
-    onSettled: () => client.invalidateQueries({ queryKey: MEMBERSHIPS_KEY }),
-  })
+  return useMembershipMutation((libraryId: string) => api.delete(`/libraries/${libraryId}`))
+}
+
+/** Server admin only. */
+export function useSetHomeAi() {
+  return useMembershipMutation(({ libraryId, allowed }: { libraryId: string, allowed: boolean }) => api.put(`/libraries/${libraryId}/home-ai`, { allowed }))
 }

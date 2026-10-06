@@ -11,13 +11,14 @@ import { Screen } from '~/components/Screen'
 import { SectionHeader } from '~/components/SectionHeader'
 import { Colors } from '~/constants/Colors'
 import { useAiProviders, useDeleteAiProvider, useSetAiProvider, useSetAiUsage } from '~/hooks/Ai'
-import { useCurrentLibrary } from '~/library/LibraryProvider'
+import { useMe, useSetHomeAi } from '~/hooks/Libraries'
+import { useCan, useCurrentLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
 
 const PROVIDERS: { key: AiProvider, name: string, defaultModel: string, blurb: string }[] = [
   { key: 'openai', name: 'OpenAI', defaultModel: 'gpt-5-mini', blurb: 'Reads covers and suggests tags. Needs an API key from platform.openai.com.' },
   { key: 'gemini', name: 'Google Gemini', defaultModel: 'gemini-2.5-flash', blurb: 'Reads covers and suggests tags. Needs an API key from aistudio.google.com.' },
-  { key: 'openai_compatible', name: 'Self-hosted / Ollama', defaultModel: '', blurb: 'Any OpenAI-compatible endpoint over HTTPS, e.g. Ollama behind an authenticated gateway such as OmniRoute.' },
+  { key: 'openai_compatible', name: 'Self-hosted', defaultModel: '', blurb: 'Any OpenAI-compatible endpoint over HTTPS (e.g. your own gateway).' },
 ]
 
 function ProviderForm({ libraryId, provider, existing }: { libraryId: string, provider: typeof PROVIDERS[number], existing?: IAiProviderConfig }) {
@@ -98,6 +99,9 @@ export default function AiSettingsScreen() {
   const { library } = useCurrentLibrary()
   const providers = useAiProviders(library.id)
   const usage = useSetAiUsage()
+  const me = useMe()
+  const homeAi = useSetHomeAi()
+  const canManage = useCan('ai.manage')
   const configured = providers.data ?? []
   const visionCapable = configured.filter(p => p.supportsVision)
   const nameOf = (key: AiProvider) => PROVIDERS.find(p => p.key === key)!.name
@@ -110,14 +114,28 @@ export default function AiSettingsScreen() {
     <Screen header={<Header title="Smart helpers (AI)" subtitle={library.name} />}>
       {providers.isPending && <Loading />}
       {providers.error && <ErrorState error={providers.error} onRetry={providers.refetch} />}
-      {providers.data && (
+      {me.data?.isAdmin && (
+        <Card className="flex-row items-center gap-3 py-4">
+          <Text className="text-2xl">🏠</Text>
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-ink">Home AI</Text>
+            <Text className="text-sm text-muted">Server admin: let this library use the home server's AI for free tag ideas.</Text>
+          </View>
+          <Switch
+            value={library.homeAiAllowed}
+            onValueChange={allowed => homeAi.mutate({ libraryId: library.id, allowed })}
+            trackColor={{ true: Colors.primary }}
+          />
+        </Card>
+      )}
+      {providers.data && canManage && (
         <>
           <View className="gap-3">
             <SectionHeader title="Use AI for" />
             <Card className="gap-3 py-4">
               <Text className="text-sm font-semibold text-muted">Suggesting tags, categories and descriptions</Text>
               <View className="flex-row flex-wrap gap-2">
-                <Chip label="Off" selected={!library.enrichProvider} onPress={() => setUsage(null, library.visionProvider)} />
+                <Chip label={library.homeAiAllowed ? '🏠 Home AI (free)' : 'Off'} selected={!library.enrichProvider} onPress={() => setUsage(null, library.visionProvider)} />
                 {configured.map(p => (
                   <Chip key={p.provider} label={nameOf(p.provider)} selected={library.enrichProvider === p.provider} onPress={() => setUsage(p.provider, library.visionProvider)} />
                 ))}

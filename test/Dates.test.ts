@@ -1,7 +1,6 @@
 import { DateTime } from 'luxon'
 import { describe, expect, it } from 'vitest'
 import { formatDate, formatRelative, isOverdue } from '~/utils/Dates'
-import { errorMessage } from '~/utils/Errors'
 
 const now = DateTime.fromISO('2026-10-05T12:00:00')
 
@@ -24,15 +23,5 @@ describe('dates', () => {
   it('formats dates', () => {
     expect(formatDate('2026-10-05T12:00:00')).toBe('5 Oct 2026')
     expect(formatDate(null)).toBe('')
-  })
-})
-
-describe('errors', () => {
-  it('names the missing permission', () => {
-    expect(errorMessage({ code: '42501', hint: 'loans.manage', message: 'x' })).toBe('You need the "Borrow & give back" permission for this.')
-    expect(errorMessage({ code: '42501', message: 'x' })).toBe('You don\'t have permission to do this.')
-    expect(errorMessage({ code: '23503', message: 'fk' })).toContain('still in use')
-    expect(errorMessage(new Error('boom'))).toBe('boom')
-    expect(errorMessage(null)).toBe('Something went wrong')
   })
 })

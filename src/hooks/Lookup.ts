@@ -1,26 +1,21 @@
 import type { IBookDraft, IEnrichment, IIdentification } from '~/models/IBookDraft'
-import { invokeFunction } from '~/api/Supabase'
+import type { ILookupResultDto } from '~shared/contracts/Lookup'
+import { api } from '~/api/Http'
 
-export interface ILookupResult {
-  draft: IBookDraft | null
-  candidates: IBookDraft[]
-  sources: { openLibrary?: boolean, googleBooks?: boolean }
-  isbn: { isbn13: string, isbn10: string | null } | null
-  existingCopies: { id: string, title: string, status: string, shelf_id: string | null }[]
-}
+export type ILookupResult = ILookupResultDto
 
 export function lookupIsbn(libraryId: string, isbn: string): Promise<ILookupResult> {
-  return invokeFunction<ILookupResult>('lookup-book', { libraryId, isbn })
+  return api.post<ILookupResult>(`/libraries/${libraryId}/lookup`, { isbn })
 }
 
 export function lookupText(libraryId: string, title: string, author?: string): Promise<ILookupResult> {
-  return invokeFunction<ILookupResult>('lookup-book', { libraryId, title, author })
+  return api.post<ILookupResult>(`/libraries/${libraryId}/lookup`, { title, author })
 }
 
 export function enrichDraft(libraryId: string, draft: IBookDraft): Promise<{ enrichment: IEnrichment, provider: string }> {
-  return invokeFunction('enrich-book', { libraryId, draft })
+  return api.post(`/libraries/${libraryId}/ai/enrich`, { draft })
 }
 
 export function identifyCover(libraryId: string, imageBase64: string): Promise<{ identification: IIdentification, candidates: IBookDraft[] }> {
-  return invokeFunction('identify-cover', { libraryId, imageBase64 })
+  return api.post(`/libraries/${libraryId}/ai/identify-cover`, { imageBase64 })
 }

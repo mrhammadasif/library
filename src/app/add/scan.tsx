@@ -92,7 +92,7 @@ export default function ScanScreen() {
             label="I'm borrowing it"
             loading={lend.isPending}
             onPress={() => lend.mutate(
-              { bookId: book.id, borrowerUserId: user!.id, dueAt: DateTime.now().plus({ days: 14 }).endOf('day').toISO() },
+              { libraryId: library.id, bookId: book.id, borrowerUserId: user!.id, dueAt: DateTime.now().plus({ days: 14 }).endOf('day').toISO() },
               { onSuccess: () => done('Enjoy the book! Back in 2 weeks', '📖') },
             )}
           />
@@ -103,7 +103,7 @@ export default function ScanScreen() {
             icon="corner-down-left"
             label="I'm giving it back"
             loading={giveBack.isPending}
-            onPress={() => giveBack.mutate({ bookId: book.id }, { onSuccess: () => done(`Put it on ${shelf(book.shelfId)}`, '📍') })}
+            onPress={() => giveBack.mutate({ libraryId: library.id, bookId: book.id }, { onSuccess: () => done(`Put it on ${shelf(book.shelfId)}`, '📍') })}
           />
         )}
         {book.status === 'missing' && can.audit && (
@@ -112,7 +112,7 @@ export default function ScanScreen() {
             icon="check"
             label="I found it!"
             loading={markFound.isPending}
-            onPress={() => markFound.mutate({ bookId: book.id }, { onSuccess: () => done('Found! Thank you', '🎉') })}
+            onPress={() => markFound.mutate({ libraryId: library.id, bookId: book.id }, { onSuccess: () => done('Found! Thank you', '🎉') })}
           />
         )}
         <View className="flex-row gap-3">

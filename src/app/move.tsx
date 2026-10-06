@@ -47,13 +47,13 @@ export default function MoveScreen() {
       },
     }
     if (mode === 'move') {
-      move.mutate({ bookIds: ids, shelfId }, done)
+      move.mutate({ libraryId: library.id, bookIds: ids, shelfId }, done)
     }
     else if (mode === 'return') {
-      returnBook.mutate({ bookId: ids[0], shelfId }, done)
+      returnBook.mutate({ libraryId: library.id, bookId: ids[0], shelfId }, done)
     }
     else {
-      restore.mutate({ bookId: ids[0], shelfId }, done)
+      restore.mutate({ libraryId: library.id, bookId: ids[0], shelfId }, done)
     }
   }
 

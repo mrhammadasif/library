@@ -1,6 +1,6 @@
 import { Image } from 'expo-image'
 import { Text, View } from 'react-native'
-import { coverUri } from '~/api/Supabase'
+import { coverUri } from '~/api/Http'
 import { Colors } from '~/constants/Colors'
 
 interface IBookCoverProps {

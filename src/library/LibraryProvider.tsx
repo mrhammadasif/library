@@ -19,7 +19,9 @@ const LibraryContext = createContext<ILibraryContext | null>(null)
 
 export function LibraryProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const memberships = useMemberships(user?.id)
+  // Unverified users can't do anything with libraries yet; wait until they've confirmed their email.
+  const verifiedId = user?.emailVerified ? user.id : undefined
+  const memberships = useMemberships(verifiedId)
   const [selectedId, setSelectedId] = useState<string | null | undefined>(undefined)
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     AsyncStorage.setItem(StorageKeys.CurrentLibrary, libraryId).catch(() => {})
   }
 
-  const loading = !!user && (memberships.isPending || selectedId === undefined)
+  const loading = !!verifiedId && (memberships.isPending || selectedId === undefined)
   return <LibraryContext value={{ loading, memberships: list, current, select }}>{children}</LibraryContext>
 }
 

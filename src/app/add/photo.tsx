@@ -3,7 +3,6 @@ import { Feather } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import { FunctionError } from '~/api/Supabase'
 import { BookCover } from '~/components/BookCover'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
@@ -67,7 +66,7 @@ export default function PhotoScreen() {
       setResult(identified)
     }
     catch (e) {
-      setError(e instanceof FunctionError ? e.message : errorMessage(e))
+      setError(errorMessage(e))
     }
     finally {
       setBusy(false)

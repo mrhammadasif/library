@@ -13,8 +13,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reportsDirectory: 'test-results/coverage',
-      include: ['src/utils/**', 'src/mappers/**', 'src/constants/Permissions.ts', 'shared/**'],
-      exclude: ['src/utils/Storage.ts', 'src/utils/ImagePrep.ts', 'src/utils/CoverPhoto.ts', 'src/utils/Invite.ts'],
+      include: ['src/utils/**', 'src/api/ApiError.ts', 'src/constants/Permissions.ts', 'shared/**'],
+      exclude: ['src/utils/Storage.ts', 'src/utils/ImagePrep.ts', 'src/utils/CoverPhoto.ts', 'src/utils/Invite.ts', 'src/utils/AuditNav.ts', 'shared/contracts/**'],
     },
   },
 })

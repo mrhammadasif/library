@@ -23,7 +23,7 @@ export default function RackScreen() {
   const racks = useRacks(library.id)
   const canManage = useCan('shelves.manage')
   const saveRack = useSaveRack()
-  const deleteRack = useDeleteRack()
+  const deleteRack = useDeleteRack(library.id)
   const saveShelf = useSaveShelf()
   const reorder = useReorderShelves(library.id)
   const [newShelf, setNewShelf] = useState<string | null>(null)

@@ -1,13 +1,14 @@
-import { router } from 'expo-router'
 import { useState } from 'react'
-import { KeyboardAvoidingView, Text, View } from 'react-native'
+import { KeyboardAvoidingView, ScrollView, Text } from 'react-native'
 import { useAuth } from '~/auth/AuthProvider'
 import { Button } from '~/components/Button'
 import { Field } from '~/components/Field'
+import { GoogleButton } from '~/components/GoogleButton'
 import { Header } from '~/components/Header'
 import { SafeArea } from '~/components/SafeArea'
 import { errorMessage } from '~/utils/Errors'
 
+/** After sign-up the user is signed in but unverified; the root layout then shows the verify-email screen. */
 export default function SignUpScreen() {
   const { signUp } = useAuth()
   const [name, setName] = useState('')
@@ -15,7 +16,6 @@ export default function SignUpScreen() {
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [confirm, setConfirm] = useState(false)
 
   async function onSubmit() {
     setError(null)
@@ -25,9 +25,7 @@ export default function SignUpScreen() {
     }
     setBusy(true)
     try {
-      if (await signUp(name, email, password) === 'confirm') {
-        setConfirm(true)
-      }
+      await signUp(name, email, password)
     }
     catch (e) {
       setError(errorMessage(e))
@@ -40,23 +38,16 @@ export default function SignUpScreen() {
   return (
     <SafeArea className="flex-1 bg-canvas">
       <Header title="Create account" />
-      <KeyboardAvoidingView behavior="padding" className="flex-1 gap-4 px-7 pt-4">
-        {confirm
-          ? (
-              <View className="gap-4">
-                <Text className="text-base text-ink">Check {email} for a confirmation link, then sign in.</Text>
-                <Button label="Back to sign in" onPress={() => router.replace('/sign-in')} />
-              </View>
-            )
-          : (
-              <>
-                <Field label="Your name" value={name} onChangeText={setName} autoComplete="name" hint="Shown to people you share a library with" />
-                <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-                <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
-                {error && <Text className="text-center text-sm text-negative">{error}</Text>}
-                <Button big label="Create account" onPress={onSubmit} loading={busy} disabled={!name.trim() || !email || !password} />
-              </>
-            )}
+      <KeyboardAvoidingView behavior="padding" className="flex-1">
+        <ScrollView contentContainerClassName="gap-4 px-7 pb-10 pt-4" keyboardShouldPersistTaps="handled">
+          <GoogleButton />
+          <Text className="py-2 text-center text-base text-muted">or use your email</Text>
+          <Field label="Your name" value={name} onChangeText={setName} autoComplete="name" hint="Shown to people you share a library with" />
+          <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" hint="We'll email you a code to check it's yours" />
+          <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
+          {error && <Text className="text-center text-base text-negative">{error}</Text>}
+          <Button big label="Create account" onPress={onSubmit} loading={busy} disabled={!name.trim() || !email || !password} />
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeArea>
   )

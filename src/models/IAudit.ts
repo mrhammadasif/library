@@ -1,25 +1,10 @@
-export type AuditMode = 'random' | 'shelf'
-export type AuditResult = 'pending' | 'found' | 'missing' | 'misplaced' | 'unexpected'
+import type { IAuditDto, IAuditItemDto } from '~shared/contracts/Audits'
 
-export interface IAudit {
-  id: string
-  mode: AuditMode
-  shelfId: string | null
-  sampleSize: number | null
-  startedAt: string
-  completedAt: string | null
-  counts: Record<AuditResult, number>
-}
+export type IAudit = IAuditDto
+export type AuditMode = IAuditDto['mode']
+export type AuditResult = IAuditItemDto['result']
 
-export interface IAuditItem {
-  id: string
-  bookId: string | null
-  bookTitle: string | null
-  bookAuthors: string[]
+/** An audit item with its cover resolved to a URL for display. */
+export interface IAuditItem extends IAuditItemDto {
   coverUri: string | null
-  dominantColor: string | null
-  expectedShelfId: string | null
-  foundShelfId: string | null
-  scannedIsbn: string | null
-  result: AuditResult
 }

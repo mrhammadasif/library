@@ -51,7 +51,7 @@ function EditForm({ bookId, initial }: { bookId: string, initial: IBookFields })
     setError(null)
     try {
       const coverPath = localCover ? await uploadCover(library.id, bookId, localCover) : fields.coverPath
-      await update.mutateAsync({ id: bookId, fields: { ...fields, coverPath } })
+      await update.mutateAsync({ libraryId: library.id, id: bookId, fields: { ...fields, coverPath } })
       router.back()
     }
     catch (e) {
@@ -88,7 +88,8 @@ function EditForm({ bookId, initial }: { bookId: string, initial: IBookFields })
 
 export default function EditBookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
-  const book = useBook(id)
+  const { library } = useCurrentLibrary()
+  const book = useBook(library.id, id)
   return (
     <Screen header={<Header title="Edit book" />}>
       {book.isPending && <Loading />}

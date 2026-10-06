@@ -1,18 +1,6 @@
-// The lookup/enrichment shapes returned by the edge functions (supabase/functions/_shared).
+import type { z } from 'zod'
+import type { EnrichmentSchema, IdentificationSchema } from '~shared/contracts/Ai'
+
 export type { IBookDraft } from '~shared/metadata'
-
-export interface IEnrichment {
-  categories: string[]
-  tags: string[]
-  description: string | null
-  language: string | null
-}
-
-export interface IIdentification {
-  title: string
-  subtitle: string | null
-  authors: string[]
-  isbn: string | null
-  publisher: string | null
-  confidence: number
-}
+export type IEnrichment = z.infer<typeof EnrichmentSchema>
+export type IIdentification = z.infer<typeof IdentificationSchema>

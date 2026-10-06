@@ -5,8 +5,8 @@ const expoConfig = require('eslint-config-expo/flat')
 module.exports = defineConfig([
   expoConfig,
   {
-    // Deno edge functions are checked with `deno check` instead (npm run check:fn).
-    ignores: ['dist/*', 'supabase/functions/**', 'server/**'],
+    // The API (server/) has its own toolchain.
+    ignores: ['dist/*', 'server/**'],
   },
   {
     rules: {

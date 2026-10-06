@@ -49,7 +49,7 @@ export default function ReportsScreen() {
     )
   }
   const s = stats.data
-  const months = monthSeries(s.added_by_month)
+  const months = monthSeries(s.addedByMonth)
   const last = s.audit.last
   const swatch = (name: string) => BOOK_COLORS.find(c => c.name === name)
 
@@ -64,9 +64,9 @@ export default function ReportsScreen() {
           <StatTile label="Pages" value={s.pages.toLocaleString()} />
         </View>
         <View className="flex-row gap-3">
-          <StatTile label="At home" value={s.by_status.on_shelf ?? 0} tone="positive" />
-          <StatTile label="Borrowed" value={s.by_status.borrowed ?? 0} tone={s.loans.overdue ? 'warn' : 'ink'} />
-          <StatTile label="Missing" value={s.by_status.missing ?? 0} tone={s.by_status.missing ? 'negative' : 'ink'} />
+          <StatTile label="At home" value={s.byStatus.on_shelf ?? 0} tone="positive" />
+          <StatTile label="Borrowed" value={s.byStatus.borrowed ?? 0} tone={s.loans.overdue ? 'warn' : 'ink'} />
+          <StatTile label="Missing" value={s.byStatus.missing ?? 0} tone={s.byStatus.missing ? 'negative' : 'ink'} />
         </View>
         <View className="flex-row gap-3">
           <StatTile label="Late back" value={s.loans.overdue} tone={s.loans.overdue ? 'warn' : 'ink'} />
@@ -102,15 +102,15 @@ export default function ReportsScreen() {
         </Section>
       )}
 
-      {s.top_categories.length > 0 && (
+      {s.topCategories.length > 0 && (
         <Section title="🏷️ Favourite kinds of books">
-          <HBars bars={s.top_categories.map(c => ({ label: c.name, value: c.books }))} />
+          <HBars bars={s.topCategories.map(c => ({ label: c.name, value: c.books }))} />
         </Section>
       )}
 
-      {s.top_authors.length > 0 && (
+      {s.topAuthors.length > 0 && (
         <Section title="✍️ Favourite authors">
-          <HBars bars={s.top_authors.map(a => ({ label: a.name, value: a.books }))} />
+          <HBars bars={s.topAuthors.map(a => ({ label: a.name, value: a.books }))} />
         </Section>
       )}
 
@@ -130,12 +130,12 @@ export default function ReportsScreen() {
         {last
           ? (
               <Text className="text-base text-ink">
-                Last check {formatDate(last.completed_at)}: {last.found} of {last.total} found
+                Last check {formatDate(last.completedAt)}: {last.found} of {last.total} found
                 {last.missing ? `, ${last.missing} missing` : ''}.
               </Text>
             )
           : <Text className="text-base text-muted">No book checks yet.</Text>}
-        <Text className="text-sm text-muted">{`${s.audit.unseen_year} books haven't been checked in over a year.`}</Text>
+        <Text className="text-sm text-muted">{`${s.audit.unseenYear} books haven't been checked in over a year.`}</Text>
         {canAudit && <Button variant="secondary" icon="check-square" label="Do a book check" onPress={() => router.push('/audit')} />}
       </Section>
     </Screen>

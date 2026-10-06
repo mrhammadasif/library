@@ -9,24 +9,24 @@ import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
 import { SettingsCard, SettingsRow } from '~/components/SettingsCard'
 import { describePermissions } from '~/constants/Permissions'
-import { useDeleteLibrary, useRenameLibrary } from '~/hooks/Libraries'
-import { useProfile, useRemoveMember, useUpdateDisplayName } from '~/hooks/Members'
+import { useDeleteLibrary, useMe, useRenameLibrary } from '~/hooks/Libraries'
+import { useRemoveMember, useUpdateDisplayName } from '~/hooks/Members'
 import { useCan, useCurrentLibrary, useLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
 
 export default function SettingsScreen() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, refresh } = useAuth()
   const { memberships, select } = useLibrary()
   const current = useCurrentLibrary()
   const { library } = current
   const isOwner = current.role === 'owner'
   const canMembers = useCan('members.manage')
   const canAi = useCan('ai.manage')
-  const profile = useProfile(user?.id)
   const rename = useRenameLibrary()
   const remove = useDeleteLibrary()
   const leave = useRemoveMember()
   const updateName = useUpdateDisplayName()
+  const me = useMe()
   const [libraryName, setLibraryName] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
 
@@ -71,8 +71,8 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="cpu"
           label="Smart helpers (AI)"
-          hint={[library.enrichProvider && 'Tag ideas on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
-          onPress={canAi ? () => router.push('/ai-settings') : undefined}
+          hint={[(library.enrichProvider || library.homeAiAllowed) && 'Tag ideas on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
+          onPress={canAi || me.data?.isAdmin ? () => router.push('/ai-settings') : undefined}
           last
         />
       </SettingsCard>
@@ -92,8 +92,10 @@ export default function SettingsScreen() {
           ))}
 
       <SettingsCard title="You">
-        <SettingsRow icon="user" label={profile.data?.display_name ?? '…'} hint={user?.email} onPress={() => setDisplayName(profile.data?.display_name ?? '')} />
-        <SettingsRow icon="log-out" label="Sign out" onPress={signOut} last />
+        <SettingsRow icon="user" label={user?.name || '…'} hint={user?.email} onPress={() => setDisplayName(user?.name ?? '')} />
+        <SettingsRow icon="smartphone" label="Your devices" hint="Sign out a lost phone" onPress={() => router.push('/devices')} />
+        <SettingsRow icon="log-out" label="Sign out" onPress={signOut} />
+        <SettingsRow icon="user-x" label="Delete my account" danger onPress={() => router.push('/delete-account')} last />
       </SettingsCard>
       {displayName !== null && (
         <Card className="gap-3 py-4">
@@ -102,7 +104,7 @@ export default function SettingsScreen() {
             label="Save"
             loading={updateName.isPending}
             disabled={!displayName.trim()}
-            onPress={() => updateName.mutate({ userId: user!.id, name: displayName }, { onSuccess: () => setDisplayName(null) })}
+            onPress={() => updateName.mutate({ name: displayName }, { onSuccess: () => { setDisplayName(null); refresh() } })}
           />
         </Card>
       )}

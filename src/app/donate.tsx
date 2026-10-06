@@ -6,6 +6,7 @@ import { Field } from '~/components/Field'
 import { Screen } from '~/components/Screen'
 import { useToast } from '~/components/Toast'
 import { useArchiveBooks } from '~/hooks/Books'
+import { useCurrentLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
 
 const REASONS = [
@@ -19,6 +20,7 @@ const REASONS = [
 export default function DonateScreen() {
   const params = useLocalSearchParams<{ ids: string }>()
   const ids = params.ids.split(',').filter(Boolean)
+  const { library } = useCurrentLibrary()
   const archive = useArchiveBooks()
   const toast = useToast()
   const [reason, setReason] = useState('donated')
@@ -56,7 +58,7 @@ export default function DonateScreen() {
         icon="check"
         label="Done"
         loading={archive.isPending}
-        onPress={() => archive.mutate({ bookIds: ids, reason, recipient, note }, {
+        onPress={() => archive.mutate({ libraryId: library.id, bookIds: ids, reason, recipient, note }, {
           onSuccess: () => {
             toast(reason === 'donated' ? 'Thanks for sharing books!' : 'Taken off the shelves', reason === 'donated' ? '🎁' : '👍')
             router.back()

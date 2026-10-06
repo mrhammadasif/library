@@ -40,7 +40,7 @@ export default function LendScreen() {
   const { library } = useCurrentLibrary()
   const { user } = useAuth()
   const toast = useToast()
-  const book = useBook(bookId)
+  const book = useBook(library.id, bookId)
   const members = useMembers(library.id)
   const lend = useLendBook()
   const [who, setWho] = useState<string | null>(null)
@@ -126,6 +126,7 @@ export default function LendScreen() {
         disabled={!valid}
         loading={lend.isPending}
         onPress={() => lend.mutate({
+          libraryId: library.id,
           bookId,
           borrowerUserId: who === OTHER ? null : who,
           borrowerName: who === OTHER ? name : undefined,

@@ -1,6 +1,6 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator'
 import { getColors } from 'react-native-image-colors'
-import { getSupabase } from '~/api/Supabase'
+import { api } from '~/api/Http'
 
 /** Downscales a photo to ≤768px wide JPEG: small enough for AI vision calls and cover storage. */
 export async function prepareImage(uri: string): Promise<{ uri: string, base64: string }> {
@@ -9,15 +9,18 @@ export async function prepareImage(uri: string): Promise<{ uri: string, base64: 
   return { uri: saved.uri, base64: saved.base64 ?? '' }
 }
 
-/** Uploads a local JPEG as a book cover; returns its storage path. A fresh path per upload busts image caches. */
+/**
+ * Uploads a local JPEG as a book cover straight to storage via a presigned URL (the API never handles the bytes).
+ * Returns the storage key to save as the book's coverPath.
+ */
 export async function uploadCover(libraryId: string, bookId: string, localUri: string): Promise<string> {
-  const path = `${libraryId}/${bookId}-${Date.now()}.jpg`
-  const body = await (await fetch(localUri)).arrayBuffer()
-  const { error } = await getSupabase().storage.from('covers').upload(path, body, { contentType: 'image/jpeg', upsert: true })
-  if (error) {
-    throw error
+  const { uploadUrl, key } = await api.post<{ uploadUrl: string, key: string }>(`/libraries/${libraryId}/covers/presign`, { bookId })
+  const body = await (await fetch(localUri)).blob()
+  const put = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body })
+  if (!put.ok) {
+    throw new Error(`Cover upload failed (${put.status})`)
   }
-  return path
+  return key
 }
 
 /** Dominant colour of a cover (local or remote), or null when it can't be read. */

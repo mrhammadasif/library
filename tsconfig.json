@@ -23,7 +23,6 @@
     "nativewind-env.d.ts"
   ],
   "exclude": [
-    "supabase/functions/**",
     "server/**",
     "node_modules"
   ]

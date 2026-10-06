@@ -18,10 +18,12 @@ const queryClient = new QueryClient({
 const SHEET = { presentation: 'formSheet' as const, sheetAllowedDetents: [0.7, 1], sheetCornerRadius: 24 }
 
 function RootStack() {
-  const { status } = useAuth()
+  const { status, user } = useAuth()
   const { loading, current } = useLibrary()
   const signedIn = status === 'signedIn'
-  const ready = status !== 'loading' && !(signedIn && loading)
+  // Unverified accounts are read-only on the server, so they only see the "type your code" screen.
+  const verified = signedIn && !!user?.emailVerified
+  const ready = status !== 'loading' && !(verified && loading)
 
   useEffect(() => {
     if (ready) {
@@ -34,7 +36,7 @@ function RootStack() {
   }
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.canvas } }}>
-      <Stack.Protected guard={signedIn && !!current}>
+      <Stack.Protected guard={verified && !!current}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="add/scan" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         <Stack.Screen name="add/photo" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
@@ -57,12 +59,19 @@ function RootStack() {
         <Stack.Screen name="invite" options={SHEET} />
         <Stack.Screen name="ai-settings" />
       </Stack.Protected>
-      <Stack.Protected guard={signedIn}>
+      <Stack.Protected guard={verified}>
         <Stack.Screen name="welcome" />
+        <Stack.Screen name="devices" />
+        <Stack.Screen name="delete-account" />
+      </Stack.Protected>
+      <Stack.Protected guard={signedIn && !verified}>
+        <Stack.Screen name="verify-email" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn}>
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
+        <Stack.Screen name="sign-in-code" />
+        <Stack.Screen name="forgot-password" />
       </Stack.Protected>
     </Stack>
   )

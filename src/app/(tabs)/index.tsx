@@ -1,7 +1,6 @@
 import { Feather } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { Pressable, ScrollView, Text, View } from 'react-native'
-import { useAuth } from '~/auth/AuthProvider'
 import { ActionTile } from '~/components/ActionTile'
 import { Avatar } from '~/components/Avatar'
 import { BookTile } from '~/components/BookTile'
@@ -11,8 +10,8 @@ import { Screen } from '~/components/Screen'
 import { SectionHeader } from '~/components/SectionHeader'
 import { Colors } from '~/constants/Colors'
 import { useRecentBooks } from '~/hooks/Books'
+import { useMe } from '~/hooks/Libraries'
 import { useOpenLoans } from '~/hooks/Loans'
-import { useProfile } from '~/hooks/Members'
 import { useRacks } from '~/hooks/Shelves'
 import { useLibraryStats } from '~/hooks/Stats'
 import { useCan, useCurrentLibrary } from '~/library/LibraryProvider'
@@ -40,9 +39,8 @@ function SetupStep({ n, done, title, text, onPress }: { n: number, done: boolean
 }
 
 export default function HomeScreen() {
-  const { user } = useAuth()
   const { library } = useCurrentLibrary()
-  const profile = useProfile(user?.id)
+  const me = useMe()
   const stats = useLibraryStats(library.id)
   const recent = useRecentBooks(library.id, 12)
   const loans = useOpenLoans(library.id)
@@ -53,7 +51,7 @@ export default function HomeScreen() {
   const coverWidth = 104
 
   const overdue = (loans.data ?? []).filter(l => isOverdue(l.dueAt))
-  const firstName = profile.data?.display_name.split(' ')[0]
+  const firstName = me.data?.name.split(' ')[0]
   const hasRack = (racks.data?.length ?? 0) > 0
   const hasShelf = racks.data?.some(r => r.shelves.length > 0) ?? false
   const hasBook = (stats.data?.total ?? 0) + (stats.data?.archived ?? 0) > 0

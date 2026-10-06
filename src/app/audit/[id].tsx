@@ -75,12 +75,12 @@ function ItemCard({ item, shelfName, open, onRecord, canMove, misplacing, setMis
 export default function AuditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
   const { library } = useCurrentLibrary()
-  const audit = useAudit(id)
+  const audit = useAudit(library.id, id)
   const racks = useRacks(library.id)
   const labels = shelfLabels(racks.data)
-  const record = useRecordAuditItem()
-  const scan = useRecordAuditScan()
-  const complete = useCompleteAudit()
+  const record = useRecordAuditItem(library.id)
+  const scan = useRecordAuditScan(library.id)
+  const complete = useCompleteAudit(library.id)
   const canMove = useCan('books.move')
   const canAudit = useCan('audits.run')
   const [scanning, setScanning] = useState(false)
@@ -105,10 +105,10 @@ export default function AuditScreen() {
   function onIsbn(isbn: string) {
     scan.mutate({ auditId: id, isbn }, {
       onSuccess: (r) => {
-        const title = items.find(i => i.id === r.item_id)?.bookTitle
+        const title = items.find(i => i.id === r.itemId)?.bookTitle
         setLastScan(r.result === 'found'
           ? `✅ ${title ?? isbn}${r.already ? ' (already counted)' : ''}`
-          : r.book_id ? '📍 That one belongs on another shelf' : '🤔 That book isn\'t in the library')
+          : r.bookId ? '📍 That one belongs on another shelf' : '🤔 That book isn\'t in the library')
       },
     })
   }

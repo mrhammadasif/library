@@ -21,7 +21,7 @@ export default function MembersScreen() {
   const canManage = useCan('members.manage')
   const members = useMembers(library.id)
   const invites = useInvites(library.id, canManage)
-  const deleteInvite = useDeleteInvite()
+  const deleteInvite = useDeleteInvite(library.id)
 
   return (
     <Screen header={<Header title="Members" subtitle={library.name} />} refreshing={members.isRefetching} onRefresh={members.refetch}>
