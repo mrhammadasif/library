@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "module": "node20",
+    "moduleResolution": "node16",
+    "target": "ES2023",
+    "lib": [
+      "ES2023"
+    ],
+    "strict": true,
+    "declaration": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "prisma.config.ts"
+  ]
+}
