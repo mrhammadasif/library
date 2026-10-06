@@ -10,7 +10,11 @@ import { MeController } from '../account/MeController'
 import { AccessGuard, AUTH } from '../auth/AccessGuard'
 import { ErrorFilter } from '../common/ErrorFilter'
 import { APP_CONFIG } from '../config/AppConfig'
+import { AuditsModule } from '../audits/AuditsModule'
+import { BooksModule } from '../books/BooksModule'
 import { HealthController } from '../health/HealthController'
+import { LoansModule } from '../loans/LoansModule'
+import { ShelvesModule } from '../shelves/ShelvesModule'
 import { InvitesModule } from '../invites/InvitesModule'
 import { LibrariesModule } from '../libraries/LibrariesModule'
 import { MembersModule } from '../members/MembersModule'
@@ -30,7 +34,7 @@ export class AppModule {
       module: AppModule,
       global: true,
       // AccessGuard replaces the package's global guard so the check order is ours (see AccessGuard).
-      imports: [AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }), LibrariesModule, MembersModule, InvitesModule],
+      imports: [AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }), LibrariesModule, MembersModule, InvitesModule, ShelvesModule, BooksModule, LoansModule, AuditsModule],
       controllers: [HealthController, MeController],
       providers: [
         { provide: APP_CONFIG, useValue: config },

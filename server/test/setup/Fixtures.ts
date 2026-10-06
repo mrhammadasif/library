@@ -44,3 +44,23 @@ export async function createLibrary(t: ITestApp, owner: ITestUser, name = 'Home'
   }
   return res.body.id
 }
+
+export const BOOK = (title: string, extra: Record<string, unknown> = {}) => ({
+  isbn13: null, isbn10: null, title, subtitle: null, authors: [], publisher: null, publishedYear: null, pages: null, language: null,
+  description: null, categories: [], tags: [], coverPath: null, coverUrl: null, dominantColor: null, colorName: null, condition: null, notes: null,
+  ...extra,
+})
+
+/** A bookcase with two shelves, via the database (fast). */
+export async function createShelves(t: ITestApp, libraryId: string) {
+  const rack = await t.db.prisma.rack.create({ data: { libraryId, name: 'Living room', position: 1 } })
+  const top = await t.db.prisma.shelf.create({ data: { libraryId, rackId: rack.id, name: 'Top', position: 1 } })
+  const middle = await t.db.prisma.shelf.create({ data: { libraryId, rackId: rack.id, name: 'Middle', position: 2 } })
+  return { rackId: rack.id, top: top.id, middle: middle.id }
+}
+
+/** A book inserted directly in a given state. */
+export async function insertBook(t: ITestApp, libraryId: string, shelfId: string | null, title: string, extra: Record<string, unknown> = {}) {
+  const book = await t.db.prisma.book.create({ data: { libraryId, shelfId, title, authorsText: '', status: shelfId ? 'on_shelf' : 'archived', ...extra } })
+  return book.id
+}

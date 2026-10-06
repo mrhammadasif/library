@@ -19,6 +19,9 @@ export class ErrorFilter implements ExceptionFilter {
 
   catch(error: unknown, host: ArgumentsHost) {
     const body = this.toBody(error)
+    if (body.statusCode >= 500 && process.env.TEST_DEBUG) {
+      console.error(error)
+    }
     if (body.statusCode >= 500) {
       this.logger.error(error instanceof Error ? error.stack : String(error))
     }
@@ -37,7 +40,8 @@ export class ErrorFilter implements ExceptionFilter {
       if (error.code === 'P2002') {
         return { statusCode: 409, code: 'duplicate', message: 'That already exists' }
       }
-      if (error.code === 'P2003') {
+      // P2003 = NO ACTION FK; RESTRICT FKs (shelf with books) surface as a driver error P2039 with SQLSTATE 23001.
+      if (error.code === 'P2003' || /foreign key constraint/i.test(error.message)) {
         return { statusCode: 409, code: 'in_use', message: 'This is still in use (for example a shelf that still has books). Move things off it first.' }
       }
       if (error.code === 'P2025') {
