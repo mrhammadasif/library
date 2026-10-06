@@ -1,0 +1,12 @@
+# Cleanup: deletes the current (test) library from Settings. Starts on the Home tab.
+appId: com.nitroxis.library
+---
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Delete this library"
+    direction: DOWN
+- tapOn: "Delete this library"
+- tapOn: "Delete library"
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 15000

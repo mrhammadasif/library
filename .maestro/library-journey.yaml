@@ -1,0 +1,130 @@
+# Home Library: full journey against the live API (TEST DATA ONLY: a "Maestro …" library that is deleted at the end).
+#
+# Covers: sign in → create library → bookcase + shelf → add a book by hand → borrow → give back → find it →
+# quick book check game → stats → delete the library.
+# Prerequisites: release APK installed (scripts/run-e2e.sh), emulator running, test account verified,
+# TEST_EMAIL / TEST_PASSWORD in .maestro/.env.local.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+    permissions:
+      camera: allow
+- runFlow: flows/sign-in.yaml
+
+# ── A brand-new account lands on Welcome ─────────────────────────────────────
+- extendedWaitUntil:
+    visible: "Welcome"
+    timeout: 20000
+- takeScreenshot: 01-welcome
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro Library"
+- hideKeyboard
+- tapOn: "Create library"
+
+# ── Home shows the 3-step setup ──────────────────────────────────────────────
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+- takeScreenshot: 02-home-setup
+- tapOn: "Add a bookcase"
+- tapOn: "Add a bookcase"
+- tapOn:
+    id: "bookcase-name"
+- inputText: "Maestro Case"
+- hideKeyboard
+- tapOn: "Add"
+
+# New bookcase opens straight away: add a shelf with one tap
+- extendedWaitUntil:
+    visible: ".*Bookcase added.*"
+    timeout: 15000
+- tapOn: "Top shelf"
+- extendedWaitUntil:
+    visible: "0 books"
+    timeout: 10000
+- takeScreenshot: 03-bookcase
+- tapOn: "Back"
+
+# ── Add a book by typing it in ───────────────────────────────────────────────
+- tapOn: "Scan a book"
+- tapOn: "Type it in"
+- tapOn:
+    id: "book-title"
+- inputText: "Maestro Test Book"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Top shelf"
+    direction: DOWN
+- tapOn: "Top shelf"
+- scrollUntilVisible:
+    element: "Put it on the shelf"
+    direction: DOWN
+- tapOn: "Put it on the shelf"
+- extendedWaitUntil:
+    visible: ".*Added to Maestro Case.*"
+    timeout: 15000
+- takeScreenshot: 04-added
+- tapOn: "Close"
+
+# ── Borrow and give back ─────────────────────────────────────────────────────
+- tapOn: "Home"
+- scrollUntilVisible:
+    element: "Maestro Test Book"
+    direction: DOWN
+- tapOn: "Maestro Test Book"
+- extendedWaitUntil:
+    visible: "Lives on"
+    timeout: 15000
+- tapOn: "I'm borrowing it"
+- extendedWaitUntil:
+    visible: "You have it"
+    timeout: 15000
+- takeScreenshot: 05-borrowed
+- tapOn: "It's back!"
+- extendedWaitUntil:
+    visible: "Lives on"
+    timeout: 15000
+- tapOn: "Back"
+
+# ── Find it ──────────────────────────────────────────────────────────────────
+- tapOn: "Find"
+- tapOn:
+    id: "search-input"
+- inputText: "maestro"
+- hideKeyboard
+- extendedWaitUntil:
+    visible: "Maestro Test Book"
+    timeout: 15000
+- takeScreenshot: 06-found
+
+# ── Quick book check (the game) ──────────────────────────────────────────────
+- tapOn: "Home"
+- tapOn: "Book check.*"
+- tapOn: "Let's go.*"
+- extendedWaitUntil:
+    visible: "Can you find this book?"
+    timeout: 15000
+- takeScreenshot: 07-check
+- tapOn: "Found it.*"
+- extendedWaitUntil:
+    visible: "Perfect!"
+    timeout: 15000
+- tapOn: "Finish"
+- tapOn:
+    text: "Back"
+    optional: true
+
+# ── Stats ────────────────────────────────────────────────────────────────────
+- tapOn: "Stats"
+- extendedWaitUntil:
+    visible: "Books added this year.*"
+    timeout: 15000
+- takeScreenshot: 08-stats
+
+# ── Clean up the test library ────────────────────────────────────────────────
+- tapOn: "Home"
+- runFlow: flows/delete-library.yaml

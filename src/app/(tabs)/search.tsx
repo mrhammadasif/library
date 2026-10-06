@@ -76,6 +76,7 @@ export default function SearchScreen() {
           returnKeyType="search"
           autoCorrect={false}
           accessibilityLabel="Search"
+          testID="search-input"
         />
         {text.length > 0 && (
           <Pressable hitSlop={10} onPress={() => setText('')} accessibilityLabel="Clear search">

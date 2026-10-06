@@ -14,7 +14,7 @@ function toNumber(text: string): number | null {
 export function BookBasicsForm({ fields, onChange, titleError }: { fields: IBookFields, onChange: OnChange, titleError?: string | null }) {
   return (
     <View className="gap-4">
-      <Field label="Title" value={fields.title} onChangeText={v => onChange('title', v)} error={titleError} placeholder="What's the book called?" />
+      <Field testID="book-title" label="Title" value={fields.title} onChangeText={v => onChange('title', v)} error={titleError} placeholder="What's the book called?" />
       <TagInput label="Author" values={fields.authors} onChange={v => onChange('authors', v)} placeholder="Who wrote it?" />
       <Field label="Subtitle (optional)" value={fields.subtitle ?? ''} onChangeText={v => onChange('subtitle', v)} />
     </View>

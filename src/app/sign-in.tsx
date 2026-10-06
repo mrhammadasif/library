@@ -48,8 +48,8 @@ export default function SignInScreen() {
             <View className="h-px flex-1 bg-line" />
           </View>
           <View className="gap-4">
-            <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-            <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={onSubmit} />
+            <Field testID="sign-in-email" label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
+            <Field testID="sign-in-password" label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={onSubmit} />
             {error && <Text className="text-center text-base text-negative">{error}</Text>}
             <Button big label="Sign in" onPress={onSubmit} loading={busy} disabled={!email || !password} />
             <View className="flex-row justify-between">

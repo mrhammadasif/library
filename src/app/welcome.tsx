@@ -48,7 +48,7 @@ export default function WelcomeScreen() {
     >
       <Card className="gap-3 py-4">
         <Text className="text-xl font-bold text-ink">📚 Start a library</Text>
-        <Field label="What should we call it?" value={name} onChangeText={setName} placeholder="e.g. Home" />
+        <Field testID="welcome-library-name" label="What should we call it?" value={name} onChangeText={setName} placeholder="e.g. Home" />
         <View className="flex-row flex-wrap gap-2">
           {['Home', 'Family', 'Kids', 'Office'].map(n => <Chip key={n} label={n} selected={name === n} onPress={() => setName(n)} />)}
         </View>

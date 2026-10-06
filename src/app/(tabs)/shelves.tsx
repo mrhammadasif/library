@@ -132,7 +132,7 @@ export default function ShelvesScreen() {
         ? <Button big={empty} variant={empty ? 'primary' : 'secondary'} icon="plus" label="Add a bookcase" onPress={() => setNewRack('')} />
         : (
             <Card className="gap-3 py-4">
-              <Field label="What's the bookcase called?" value={newRack} onChangeText={setNewRack} placeholder="e.g. Living room, Kids room" autoFocus />
+              <Field testID="bookcase-name" label="What's the bookcase called?" value={newRack} onChangeText={setNewRack} placeholder="e.g. Living room, Kids room" autoFocus />
               {saveRack.error && <Text className="text-sm text-negative">{errorMessage(saveRack.error)}</Text>}
               <View className="flex-row gap-3">
                 <View className="flex-1"><Button variant="secondary" label="Cancel" onPress={() => setNewRack(null)} /></View>
