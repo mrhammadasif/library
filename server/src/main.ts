@@ -6,7 +6,7 @@ import { createPrismaClient } from './prisma/Prisma'
 
 async function bootstrap() {
   const config = loadConfig()
-  const prisma = createPrismaClient(config.DATABASE_URL)
+  const prisma = await createPrismaClient(config.DATABASE_URL)
   const auth = createAuth({
     prisma,
     mailer: createResendMailer(config.RESEND_API_KEY, config.EMAIL_FROM),

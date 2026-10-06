@@ -8,3 +8,5 @@ web-build/
 *.aab
 test-results/
 .claude/
+client_secret_*.json
+server/.env*

@@ -5,7 +5,8 @@ const csv = z.string().transform(v => v.split(',').map(s => s.trim()).filter(Boo
 /** Every setting the API reads, validated once at boot (a typo'd env var fails fast instead of at first use). */
 export const AppConfigSchema = z.object({
   PORT: z.coerce.number().default(3000),
-  DATABASE_URL: z.string().url(),
+  /** postgresql://… in production; pglite:./dir for local development without Docker. */
+  DATABASE_URL: z.string().regex(/^(postgres(ql)?:\/\/|pglite:)/, 'DATABASE_URL must be postgresql://… or pglite:./dir'),
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.string().url(),
   TRUSTED_ORIGINS: csv.default(['homelibrary://']),

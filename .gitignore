@@ -54,3 +54,6 @@ test-results/
 
 # edge function secrets
 supabase/functions/.env
+
+# Google OAuth client downloads (contain the client secret)
+client_secret_*.json

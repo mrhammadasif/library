@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e:pg": "bash scripts/test-e2e-pg.sh"
+    "test:e2e:pg": "bash scripts/test-e2e-pg.sh",
+    "start:local": "nest build && node --env-file=.env --env-file-if-exists=.env.secrets --env-file-if-exists=.env.garage dist/server/src/main.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1146.0",

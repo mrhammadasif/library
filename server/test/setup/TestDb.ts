@@ -3,12 +3,9 @@
 import { PGlite } from '@electric-sql/pglite'
 import { pg_trgm } from '@electric-sql/pglite/contrib/pg_trgm'
 import { PrismaPg } from '@prisma/adapter-pg'
-import { readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { PrismaPGlite } from 'pglite-prisma-adapter'
 import { PrismaClient } from '../../src/generated/prisma/client'
-
-const MIGRATIONS = join(__dirname, '../../prisma/migrations')
+import { migratePglite } from '../../src/prisma/LocalDb'
 
 export interface ITestDb {
   prisma: PrismaClient
@@ -17,16 +14,8 @@ export interface ITestDb {
   close: () => Promise<void>
 }
 
-function migrationSql(): string[] {
-  return readdirSync(MIGRATIONS, { withFileTypes: true })
-    .filter(d => d.isDirectory())
-    .map(d => d.name)
-    .sort()
-    .map(name => readFileSync(join(MIGRATIONS, name, 'migration.sql'), 'utf8'))
-}
-
 async function truncateAll(prisma: PrismaClient): Promise<void> {
-  const tables = await prisma.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`
+  const tables = await prisma.$queryRaw<{ tablename: string }[]>`SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_local_migrations'`
   if (tables.length) {
     await prisma.$executeRawUnsafe(`TRUNCATE ${tables.map(t => `"${t.tablename}"`).join(', ')} RESTART IDENTITY CASCADE`)
   }
@@ -40,9 +29,7 @@ export async function createTestDb(): Promise<ITestDb> {
     return { prisma, reset: () => truncateAll(prisma), close: () => prisma.$disconnect() }
   }
   const pglite = await PGlite.create({ extensions: { pg_trgm } })
-  for (const sql of migrationSql()) {
-    await pglite.exec(sql)
-  }
+  await migratePglite(pglite)
   const prisma = new PrismaClient({ adapter: new PrismaPGlite(pglite) })
   return { prisma, reset: () => truncateAll(prisma), close: async () => { await prisma.$disconnect(); await pglite.close() } }
 }
