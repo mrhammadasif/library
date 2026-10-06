@@ -11,6 +11,9 @@ import { AccessGuard, AUTH } from '../auth/AccessGuard'
 import { ErrorFilter } from '../common/ErrorFilter'
 import { APP_CONFIG } from '../config/AppConfig'
 import { HealthController } from '../health/HealthController'
+import { InvitesModule } from '../invites/InvitesModule'
+import { LibrariesModule } from '../libraries/LibrariesModule'
+import { MembersModule } from '../members/MembersModule'
 import { PRISMA } from '../prisma/Prisma'
 
 export interface IAppDeps {
@@ -27,7 +30,7 @@ export class AppModule {
       module: AppModule,
       global: true,
       // AccessGuard replaces the package's global guard so the check order is ours (see AccessGuard).
-      imports: [AuthModule.forRoot({ auth, disableGlobalAuthGuard: true })],
+      imports: [AuthModule.forRoot({ auth, disableGlobalAuthGuard: true }), LibrariesModule, MembersModule, InvitesModule],
       controllers: [HealthController, MeController],
       providers: [
         { provide: APP_CONFIG, useValue: config },

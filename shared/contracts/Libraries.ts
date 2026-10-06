@@ -1,0 +1,51 @@
+import { z } from 'zod'
+import { AiProviderSchema, IdSchema, PermissionSchema, RoleSchema } from './Common.ts'
+
+export const LibrarySchema = z.object({
+  id: IdSchema,
+  name: z.string(),
+  enrichProvider: AiProviderSchema.nullable(),
+  visionProvider: AiProviderSchema.nullable(),
+  homeAiAllowed: z.boolean(),
+})
+
+export const MembershipSchema = z.object({
+  library: LibrarySchema,
+  role: RoleSchema,
+  /** Effective permissions: every permission for owners. */
+  permissions: z.array(PermissionSchema),
+})
+export type IMembershipDto = z.infer<typeof MembershipSchema>
+
+export const LibraryNameInput = z.object({ name: z.string().trim().min(1).max(80) })
+export const HomeAiInput = z.object({ allowed: z.boolean() })
+
+export const MemberSchema = z.object({
+  userId: IdSchema,
+  displayName: z.string(),
+  role: RoleSchema,
+  permissions: z.array(PermissionSchema),
+  joinedAt: z.iso.datetime(),
+})
+export type IMemberDto = z.infer<typeof MemberSchema>
+
+export const SetPermissionsInput = z.object({ permissions: z.array(PermissionSchema).max(10) })
+export const SetOwnerInput = z.object({ owner: z.boolean() })
+
+export const InviteSchema = z.object({
+  id: IdSchema,
+  code: z.string(),
+  permissions: z.array(PermissionSchema),
+  expiresAt: z.iso.datetime(),
+  maxUses: z.number().int(),
+  uses: z.number().int(),
+})
+export type IInviteDto = z.infer<typeof InviteSchema>
+
+export const CreateInviteInput = z.object({
+  permissions: z.array(PermissionSchema).max(10),
+  days: z.number().int().min(1).max(90).default(7),
+  maxUses: z.number().int().min(1).max(100).default(1),
+})
+
+export const AcceptInviteInput = z.object({ code: z.string().trim().min(4).max(32) })
