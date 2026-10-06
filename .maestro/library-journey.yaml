@@ -14,10 +14,14 @@ tags:
       camera: allow
 - runFlow: flows/sign-in.yaml
 
-# ── A brand-new account lands on Welcome ─────────────────────────────────────
+# ── A fresh account lands on Welcome; a library left by an aborted run is deleted first ──
 - extendedWaitUntil:
-    visible: "Welcome"
+    visible: "Welcome|Hi .*"
     timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Welcome"
+    file: flows/delete-library.yaml
 - takeScreenshot: 01-welcome
 - tapOn:
     id: "welcome-library-name"
@@ -121,7 +125,7 @@ tags:
 # ── Stats ────────────────────────────────────────────────────────────────────
 - tapOn: "Stats"
 - extendedWaitUntil:
-    visible: "Books added this year.*"
+    visible: ".*Books added this year.*"
     timeout: 15000
 - takeScreenshot: 08-stats
 

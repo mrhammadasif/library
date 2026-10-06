@@ -81,6 +81,10 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   (api only; networks default + `n8n_default`). Postgres 17 is the shared Coolify database "nitroxis-pg" (project "common",
   container `mgpp9dnk3gikz7hdfhazv7ev`; database + non-superuser role `library`, `pg_trgm` pre-created by the superuser),
   reached over the `coolify` network ("Connect To Predefined Network") via `DATABASE_URL`. Coolify app uuid `bhidfqpixbpmtniphkxm62ln`, domain `https://api.library.home.nitroxis.com`. The container runs `prisma migrate deploy` on start.
+- Device e2e (Maestro, `.maestro/`): boot an emulator, build the release APK (`cd android && ./gradlew assembleRelease`;
+  `.env.local` must point at the API you want), then `bash scripts/run-e2e.sh`. It signs in as the pre-verified test account
+  in `.maestro/.env.local` (TEST_EMAIL/TEST_PASSWORD, gitignored), runs the whole journey against that API and deletes its
+  "Maestro Library" at the end (and any leftover from an aborted run at the start). Inputs are targeted by `testID`.
 - App env (`.env.local`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_COVERS_URL`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
   Release APK: `npm run build:preview` (clears the Metro cache, builds locally with EAS, runs `scripts/check-apk.sh`).
 

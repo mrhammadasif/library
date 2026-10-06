@@ -50,6 +50,10 @@ export default function ReportsScreen() {
   }
   const s = stats.data
   const months = monthSeries(s.addedByMonth)
+  // Whole-number axis: books come in ones, so never show 0.4 or 1.1.
+  const peak = Math.max(...months.map(m => m.value))
+  const sections = Math.min(4, Math.max(1, peak))
+  const axisMax = Math.max(sections, Math.ceil(peak / sections) * sections)
   const last = s.audit.last
   const swatch = (name: string) => BOOK_COLORS.find(c => c.name === name)
 
@@ -85,12 +89,14 @@ export default function ReportsScreen() {
           frontColor={Colors.primary}
           barBorderTopLeftRadius={4}
           barBorderTopRightRadius={4}
-          noOfSections={3}
+          maxValue={axisMax}
+          noOfSections={sections}
           yAxisThickness={0}
           xAxisColor={Colors.line}
           rulesColor={Colors.line}
           rulesType="solid"
           yAxisTextStyle={{ color: Colors.faint, fontSize: 11 }}
+          formatYLabel={label => String(Math.round(Number(label)))}
           xAxisLabelTextStyle={{ color: Colors.muted, fontSize: 11 }}
           isAnimated
         />
