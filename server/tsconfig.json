@@ -19,7 +19,12 @@
       "node"
     ],
     "rootDir": "..",
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "paths": {
+      "zod": [
+        "./node_modules/zod"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts",

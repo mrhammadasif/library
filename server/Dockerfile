@@ -1,4 +1,5 @@
-# Build context: the repo root (the API compiles ../shared too). Coolify: base dir "/", Dockerfile "server/Dockerfile".
+# Build context: the repo root (the API compiles ../shared too; tsconfig maps shared's `zod` import to server/node_modules).
+# Coolify passes env vars as --build-args; no ARGs are declared on purpose, so secrets never land in image layers.
 FROM node:22-alpine AS build
 WORKDIR /src
 COPY server/package.json server/package-lock.json ./server/
