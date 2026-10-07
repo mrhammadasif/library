@@ -325,8 +325,21 @@ async function getJson<T>(url: string): Promise<T | null> {
   return await response.json() as T
 }
 
-function googleKey(apiKey?: string): string {
-  return apiKey ? `&key=${encodeURIComponent(apiKey)}` : ''
+/**
+ * Google Books access: an API key plus a budget check called before every request (the server caps calls below
+ * Google's daily quota). Pass null to skip Google entirely; without a key Google always answers 429 anyway.
+ */
+export interface IGoogleBooks {
+  apiKey: string
+  /** Reserves one request from today's budget; false = budget spent, skip Google. */
+  take: () => Promise<boolean>
+}
+
+async function googleUrl(google: IGoogleBooks | null, path: string): Promise<string | null> {
+  if (!google?.apiKey || !await google.take()) {
+    return null
+  }
+  return `https://www.googleapis.com/books/v1/${path}&key=${encodeURIComponent(google.apiKey)}`
 }
 
 export async function fetchOpenLibraryByIsbn(isbn13: string): Promise<IBookDraft | null> {
@@ -337,28 +350,29 @@ export async function fetchOpenLibraryByIsbn(isbn13: string): Promise<IBookDraft
   return parseOpenLibraryData(data?.[key])
 }
 
-export async function fetchGoogleByIsbn(isbn13: string, apiKey?: string): Promise<IBookDraft | null> {
-  const data = await getJson<{ items?: IGoogleVolume[] }>(
-    `https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn13}${googleKey(apiKey)}`,
-  )
+export async function fetchGoogleByIsbn(isbn13: string, google: IGoogleBooks | null): Promise<IBookDraft | null> {
+  const url = await googleUrl(google, `volumes?q=isbn:${isbn13}`)
+  if (!url) {
+    return null
+  }
+  const data = await getJson<{ items?: IGoogleVolume[] }>(url)
   return parseGoogleVolume(data?.items?.[0])
 }
 
 /** Free-text candidates (title/author), Google Books first, de-duplicated by ISBN or title+author. */
-export async function searchCandidates(title: string, author: string | null, apiKey?: string): Promise<IBookDraft[]> {
+export async function searchCandidates(title: string, author: string | null, google: IGoogleBooks | null): Promise<IBookDraft[]> {
   const q = [`intitle:${title}`, author ? `inauthor:${author}` : ''].filter(Boolean).join('+')
   const olParams = new URLSearchParams({ title, limit: '5', fields: 'title,subtitle,author_name,isbn,publisher,first_publish_year,number_of_pages_median,language,subject,cover_i' })
   if (author) {
     olParams.set('author', author)
   }
-  const [google, openLibrary] = await Promise.allSettled([
-    getJson<{ items?: IGoogleVolume[] }>(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5${googleKey(apiKey)}`,
-    ),
+  const googleSearch = await googleUrl(google, `volumes?q=${encodeURIComponent(q)}&maxResults=5`)
+  const [googleResult, openLibrary] = await Promise.allSettled([
+    googleSearch ? getJson<{ items?: IGoogleVolume[] }>(googleSearch) : Promise.resolve(null),
     getJson<{ docs?: IOpenLibraryDoc[] }>(`https://openlibrary.org/search.json?${olParams}`),
   ])
   const drafts = [
-    ...(google.status === 'fulfilled' ? google.value?.items ?? [] : []).map(parseGoogleVolume),
+    ...(googleResult.status === 'fulfilled' ? googleResult.value?.items ?? [] : []).map(parseGoogleVolume),
     ...(openLibrary.status === 'fulfilled' ? openLibrary.value?.docs ?? [] : []).map(parseOpenLibraryDoc),
   ].filter((d): d is IBookDraft => d !== null)
   return dedupeCandidates(drafts).slice(0, 8)

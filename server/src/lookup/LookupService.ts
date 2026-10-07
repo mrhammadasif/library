@@ -1,11 +1,10 @@
 import type { ILookupResultDto } from '../../../shared/contracts/Lookup'
-import type { IAppConfig } from '../config/AppConfig'
 import type { PrismaClient } from '../generated/prisma/client'
-import { Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { normalizeIsbn } from '../../../shared/isbn'
 import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata'
 import { DomainError } from '../common/DomainError'
-import { APP_CONFIG } from '../config/AppConfig'
+import { GoogleBooksBudget } from '../books-budget/GoogleBooksBudget'
 import { InjectPrisma } from '../prisma/Prisma'
 
 /** ISBN → Open Library + Google Books merged into one draft; title/author → candidates. No AI here, so it's fast. */
@@ -13,7 +12,7 @@ import { InjectPrisma } from '../prisma/Prisma'
 export class LookupService {
   constructor(
     @InjectPrisma() private readonly prisma: PrismaClient,
-    @Inject(APP_CONFIG) private readonly config: IAppConfig,
+    private readonly googleBooks: GoogleBooksBudget,
   ) {}
 
   async lookup(libraryId: string, input: { isbn?: string, title?: string, author?: string }): Promise<ILookupResultDto> {
@@ -24,7 +23,7 @@ export class LookupService {
       }
       const [openLibrary, google] = await Promise.allSettled([
         fetchOpenLibraryByIsbn(isbn.isbn13),
-        fetchGoogleByIsbn(isbn.isbn13, this.config.GOOGLE_BOOKS_API_KEY),
+        fetchGoogleByIsbn(isbn.isbn13, this.googleBooks.access()),
       ])
       const ol = openLibrary.status === 'fulfilled' ? openLibrary.value : null
       const gb = google.status === 'fulfilled' ? google.value : null
@@ -41,7 +40,7 @@ export class LookupService {
         existingCopies: existing,
       }
     }
-    const candidates = await searchCandidates(input.title!, input.author ?? null, this.config.GOOGLE_BOOKS_API_KEY)
+    const candidates = await searchCandidates(input.title!, input.author ?? null, this.googleBooks.access())
     return { draft: null, candidates, sources: { openLibrary: false, googleBooks: false }, isbn: null, existingCopies: [] }
   }
 }

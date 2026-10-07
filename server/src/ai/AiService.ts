@@ -1,15 +1,14 @@
 import type { IAiProviderConfigDto } from '../../../shared/contracts/Ai'
 import type { IBookDraft } from '../../../shared/metadata'
 import type { IMembership } from '../auth/Access'
-import type { IAppConfig } from '../config/AppConfig'
 import type { AiProvider, PrismaClient } from '../generated/prisma/client'
-import { Inject, Injectable } from '@nestjs/common'
+import { Injectable } from '@nestjs/common'
 import { buildEnrichUser, chatJson, ENRICH_SCHEMA, ENRICH_SYSTEM, IDENTIFY_SCHEMA, IDENTIFY_SYSTEM, parseEnrichment, parseIdentification } from '../../../shared/ai'
 import { normalizeIsbn } from '../../../shared/isbn'
 import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata'
 import { requirePermission } from '../auth/Permissions'
+import { GoogleBooksBudget } from '../books-budget/GoogleBooksBudget'
 import { DomainError, notFound } from '../common/DomainError'
-import { APP_CONFIG } from '../config/AppConfig'
 import { InjectPrisma } from '../prisma/Prisma'
 import { AiKeyCipher } from './AiKeyCipher'
 import { OllamaClient } from './Ollama'
@@ -20,9 +19,9 @@ const VISION_BY_DEFAULT: AiProvider[] = ['openai', 'gemini']
 export class AiService {
   constructor(
     @InjectPrisma() private readonly prisma: PrismaClient,
-    @Inject(APP_CONFIG) private readonly config: IAppConfig,
     private readonly cipher: AiKeyCipher,
     private readonly ollama: OllamaClient,
+    private readonly googleBooks: GoogleBooksBudget,
   ) {}
 
   async providers(libraryId: string): Promise<IAiProviderConfigDto[]> {
@@ -119,10 +118,10 @@ export class AiService {
     const isbn = identification.isbn ? normalizeIsbn(identification.isbn) : null
     const [byIsbn, byText] = await Promise.all([
       isbn
-        ? Promise.all([fetchOpenLibraryByIsbn(isbn.isbn13), fetchGoogleByIsbn(isbn.isbn13, this.config.GOOGLE_BOOKS_API_KEY)])
+        ? Promise.all([fetchOpenLibraryByIsbn(isbn.isbn13), fetchGoogleByIsbn(isbn.isbn13, this.googleBooks.access())])
             .then(([ol, gb]) => mergeDrafts(ol, gb)).catch(() => null)
         : Promise.resolve(null),
-      searchCandidates(identification.title, identification.authors[0] ?? null, this.config.GOOGLE_BOOKS_API_KEY).catch(() => []),
+      searchCandidates(identification.title, identification.authors[0] ?? null, this.googleBooks.access()).catch(() => []),
     ])
     const candidates = byIsbn ? [{ ...byIsbn, isbn13: isbn!.isbn13, isbn10: isbn!.isbn10 }, ...byText] : byText
     return { identification, candidates: candidates.slice(0, 8) }

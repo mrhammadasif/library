@@ -8,6 +8,8 @@ function respond(body: unknown, status = 200) {
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), { status })
 }
 
+const googleAccess = { apiKey: 'k', take: async () => true }
+
 const config = { provider: 'openai_compatible' as const, model: 'm', baseUrl: 'https://gw.test/v1', apiKey: 'k' }
 const request = { system: 's', user: 'u', schema: {}, timeoutMs: 1000 }
 
@@ -45,7 +47,7 @@ describe('metadata fetchers', () => {
   it('fetches by ISBN from both sources', async () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => respond(url.includes('openlibrary') ? openLibrary : google)))
     expect((await fetchOpenLibraryByIsbn('9780441172719'))?.publisher).toBe('Ace Books')
-    expect((await fetchGoogleByIsbn('9780441172719', 'key'))?.publisher).toBe('Penguin')
+    expect((await fetchGoogleByIsbn('9780441172719', googleAccess))?.publisher).toBe('Penguin')
   })
 
   it('returns null on HTTP errors', async () => {
@@ -60,7 +62,7 @@ describe('metadata fetchers', () => {
       }
       return respond(google)
     }))
-    const results = await searchCandidates('Dune', 'Herbert')
+    const results = await searchCandidates('Dune', 'Herbert', googleAccess)
     expect(results).toHaveLength(1)
     expect(results[0].title).toBe('Dune')
   })
@@ -69,7 +71,26 @@ describe('metadata fetchers', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string) => respond(url.includes('openlibrary')
       ? { docs: [{ title: 'Dune', author_name: ['Frank Herbert'], isbn: ['9780441172719'] }, { title: 'Dune Messiah', author_name: ['Frank Herbert'] }] }
       : google)))
-    const results = await searchCandidates('Dune', null)
+    const results = await searchCandidates('Dune', null, googleAccess)
     expect(results.map(r => r.title)).toEqual(['Dune', 'Dune Messiah'])
+  })
+
+  it('never calls Google without a key or when the daily budget is spent', async () => {
+    const fetchMock = vi.fn(async (url: string) => respond(url.includes('openlibrary') ? { docs: [{ title: 'Dune', isbn: ['9780441172719'] }] } : google))
+    vi.stubGlobal('fetch', fetchMock)
+    const spent = { apiKey: 'k', take: vi.fn(async () => false) }
+    expect(await fetchGoogleByIsbn('9780441172719', null)).toBeNull()
+    expect(await fetchGoogleByIsbn('9780441172719', spent)).toBeNull()
+    expect(await searchCandidates('Dune', null, spent)).toHaveLength(1)
+    expect(await searchCandidates('Dune', null, null)).toHaveLength(1)
+    expect(fetchMock.mock.calls.map(([url]) => url).filter(url => String(url).includes('googleapis'))).toEqual([])
+    expect(spent.take).toHaveBeenCalledTimes(2)
+  })
+
+  it('adds the key to Google requests', async () => {
+    const fetchMock = vi.fn(async () => respond({ items: [] }))
+    vi.stubGlobal('fetch', fetchMock)
+    await fetchGoogleByIsbn('9780441172719', { apiKey: 'a b', take: async () => true })
+    expect(String((fetchMock.mock.calls[0] as unknown as [string])[0])).toBe('https://www.googleapis.com/books/v1/volumes?q=isbn:9780441172719&key=a%20b')
   })
 })

@@ -55,6 +55,11 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - AI: per-library OpenAI/Gemini/self-hosted keys sealed with AES-256-GCM (`AI_KEYS_KEY`, never returned). Enrichment uses the
   library's provider, else **Home AI** (direct Ollama `/api/chat`, `format` schema, `think:false`, queued one at a time)
   when the server admin (`ADMIN_EMAILS`) allowed it for that library. Cover recognition needs a vision provider (OpenAI/Gemini).
+- Google Books: every request goes through `GoogleBooksBudget` (`books-budget/`): a Postgres counter per **Pacific** day
+  (Google's quota day), taken atomically (`INSERT … ON CONFLICT DO UPDATE … WHERE count < limit`), default 900/day
+  (`GOOGLE_BOOKS_DAILY_LIMIT`, under the key's 1,000). When spent, or with no key, lookups use Open Library only.
+  Shared fetchers take `IGoogleBooks { apiKey, take }` or null. Tags/categories are also derived from subject headings
+  (`suggestTags`, `categoryPath`, `subjectCategories` in shared/metadata.ts) so they fill in without AI.
 - Covers: `POST /covers/presign` → the app PUTs the JPEG straight to Garage (`library-covers` bucket); key
   `{library}/{book}-{ts}.jpg`. The S3Client must use `requestChecksumCalculation: 'WHEN_REQUIRED'` (Garage rejects SDK CRC32).
 

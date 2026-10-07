@@ -439,3 +439,13 @@ model LibraryAiProvider {
   @@unique([libraryId, provider])
   @@map("library_ai_providers")
 }
+
+// ─── Outbound API budgets ───────────────────────────────────────────────────
+
+/// Google Books requests per Pacific-time day (Google's quota day), capped below the 1,000/day key quota.
+model GoogleBooksUsage {
+  day   DateTime @id @db.Date
+  count Int      @default(0)
+
+  @@map("google_books_usage")
+}

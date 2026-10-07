@@ -30,6 +30,7 @@ services:
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       AI_KEYS_KEY: ${AI_KEYS_KEY}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      GOOGLE_BOOKS_DAILY_LIMIT: ${GOOGLE_BOOKS_DAILY_LIMIT:-900}
     networks: [default, n8n_default]
 
 networks:

@@ -26,6 +26,8 @@ export const AppConfigSchema = z.object({
   /** 32-byte base64 key for encrypting per-library AI keys (AES-256-GCM). */
   AI_KEYS_KEY: z.string().regex(/^[A-Za-z0-9+/]{43}=$/, 'AI_KEYS_KEY must be 32 bytes, base64'),
   GOOGLE_BOOKS_API_KEY: z.string().optional(),
+  /** Server-wide Google Books requests per Pacific day; keep under the key's 1,000/day quota. */
+  GOOGLE_BOOKS_DAILY_LIMIT: z.coerce.number().int().min(0).max(1000).default(900),
   RATE_LIMIT_ENABLED: z.stringbool().default(true),
 })
 

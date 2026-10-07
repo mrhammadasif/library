@@ -19,7 +19,8 @@ export interface ITestApp {
   close: () => Promise<void>
 }
 
-export async function createTestApp(): Promise<ITestApp> {
+/** `env` overrides config for one suite (e.g. a Books key and a tiny daily limit). */
+export async function createTestApp(env: Record<string, string> = {}): Promise<ITestApp> {
   const db = await createTestDb()
   const mailbox: IOtpMail[] = []
   const config = loadConfig({
@@ -35,6 +36,9 @@ export async function createTestApp(): Promise<ITestApp> {
     S3_SECRET_ACCESS_KEY: 'test-secret',
     COVERS_PUBLIC_URL: 'https://covers.test.local',
     OLLAMA_URL: 'http://ollama.test:11434',
+    // Outbound HTTP is stubbed in tests; a key makes lookups try Google (without one, Google is skipped).
+    GOOGLE_BOOKS_API_KEY: 'test-books-key',
+    ...env,
   })
   const auth = createAuth({
     prisma: db.prisma,
