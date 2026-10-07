@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyDraft } from '../shared/metadata'
 import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft, splitList } from '~/utils/BookForm'
 
-const enrichment = { categories: ['Science Fiction'], tags: ['desert', 'Politics'], description: 'AI summary', language: 'en' }
+const enrichment = { categories: ['Science Fiction'], tags: ['desert', 'Politics'], description: 'AI summary', language: 'en', isbn13: null, publisher: null, publishedYear: null, pages: null }
 
 describe('bookForm', () => {
   it('fills blanks and unions lists', () => {
@@ -22,6 +22,15 @@ describe('bookForm', () => {
     expect(result.tags).toEqual(['mine'])
     expect(result.description).toBe('From Google')
     expect(result.language).toBeNull()
+  })
+
+  it('fills ISBN, publisher, year and pages from web facts, never over what is there', () => {
+    const web = { ...enrichment, isbn13: '9780441172719', publisher: 'Ace', publishedYear: 1990, pages: 535 }
+    expect(applyEnrichment({ ...emptyFields(), title: 'Dune' }, web, new Set())).toMatchObject({
+      isbn13: '9780441172719', isbn10: '0441172717', publisher: 'Ace', publishedYear: 1990, pages: 535,
+    })
+    const mine = applyEnrichment({ ...emptyFields(), title: 'Dune', publisher: 'Chilton', pages: 412 }, web, new Set<keyof IBookFields>(['isbn13', 'publishedYear']))
+    expect(mine).toMatchObject({ isbn13: null, isbn10: null, publisher: 'Chilton', publishedYear: null, pages: 412 })
   })
 
   it('round-trips drafts and fields', () => {

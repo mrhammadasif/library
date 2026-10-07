@@ -120,7 +120,7 @@ describe('search, stats, lookup, AI and covers', () => {
       const fetchMock = vi.fn(async () => respond({ choices: [{ message: { content: '{"categories":["Science Fiction"],"tags":["desert"],"description":"A story.","language":"en"}' } }] }))
       vi.stubGlobal('fetch', fetchMock)
       const res = await t.http().post(`${base()}/ai/enrich`).set('Cookie', owner.cookie).send({ draft: { ...BOOK('Dune'), coverUrl: null } }).expect(200)
-      expect(res.body).toEqual({ provider: 'openai', enrichment: { categories: ['Science Fiction'], tags: ['desert'], description: 'A story.', language: 'en' } })
+      expect(res.body).toEqual({ provider: 'openai', enrichment: { categories: ['Science Fiction'], tags: ['desert'], description: 'A story.', language: 'en', isbn13: null, publisher: null, publishedYear: null, pages: null } })
       expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].headers).toMatchObject({ Authorization: 'Bearer sk-secret-123' })
     })
 

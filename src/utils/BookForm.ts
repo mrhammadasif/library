@@ -1,5 +1,6 @@
 import type { IBook, IBookFields } from '~/models/IBook'
 import type { IBookDraft, IEnrichment } from '~/models/IBookDraft'
+import { isbn13To10 } from '~shared/isbn'
 
 export function emptyFields(): IBookFields {
   return {
@@ -88,6 +89,12 @@ export function applyEnrichment(fields: IBookFields, enrichment: IEnrichment, to
     tags: touched.has('tags') ? fields.tags : union(fields.tags, enrichment.tags, 10),
     description: touched.has('description') || fields.description ? fields.description : enrichment.description,
     language: touched.has('language') || fields.language ? fields.language : enrichment.language,
+    // Facts the AI read in web results only fill blanks; anything typed or found in the book databases wins.
+    isbn13: touched.has('isbn13') || fields.isbn13 ? fields.isbn13 : enrichment.isbn13,
+    isbn10: touched.has('isbn13') || fields.isbn13 || !enrichment.isbn13 ? fields.isbn10 : isbn13To10(enrichment.isbn13),
+    publisher: touched.has('publisher') || fields.publisher ? fields.publisher : enrichment.publisher,
+    publishedYear: touched.has('publishedYear') || fields.publishedYear ? fields.publishedYear : enrichment.publishedYear,
+    pages: touched.has('pages') || fields.pages ? fields.pages : enrichment.pages,
   }
 }
 

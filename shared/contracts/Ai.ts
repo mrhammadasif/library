@@ -27,6 +27,11 @@ export const EnrichmentSchema = z.object({
   tags: z.array(z.string()),
   description: z.string().nullable(),
   language: z.string().nullable(),
+  // Filled from web search results when the book databases had nothing (ISBN only if printed in a result).
+  isbn13: z.string().nullable(),
+  publisher: z.string().nullable(),
+  publishedYear: z.number().int().nullable(),
+  pages: z.number().int().nullable(),
 })
 export const EnrichResultSchema = z.object({ enrichment: EnrichmentSchema, provider: z.string() })
 

@@ -2,6 +2,8 @@
 // any OpenAI-compatible gateway (e.g. OmniRoute in front of the home-server Ollama). Prompt builders and response
 // parsing are pure and unit-tested.
 import type { IBookDraft } from './metadata.ts'
+import type { IWebResult } from './webSearch.ts'
+import { normalizeIsbn } from './isbn.ts'
 
 export type AiProvider = 'openai' | 'gemini' | 'openai_compatible'
 
@@ -77,13 +79,15 @@ export async function chatJson(config: IAiConfig, request: IChatRequest): Promis
 
 // Kept constant so local models (Ollama) can reuse the KV cache for the prefix across calls.
 export const ENRICH_SYSTEM = `You are a librarian cataloguing books in a home library.
-Given what is known about a book, reply with ONLY a JSON object:
-{"categories": string[], "tags": string[], "description": string, "language": string}
-- categories: 1-3 broad genres in Title Case (e.g. "Science Fiction", "History", "Self-Help", "Islamic Studies").
-- tags: 3-6 short lowercase keywords useful for searching a home library (themes, setting, audience, series name).
+Given what is known about a book, and possibly web search results about it, reply with ONLY a JSON object:
+{"categories": string[], "tags": string[], "description": string, "language": string, "isbn": string|null, "publisher": string|null, "year": number|null, "pages": number|null}
+- categories: 1-3 broad genres in Title Case (e.g. "Science Fiction", "History", "Self-Help", "Islamic", "Children").
+- tags: 3-6 short lowercase keywords useful for searching a home library (themes, people, setting, audience, series name).
 - description: 1-3 neutral sentences summarising the book, max 400 characters. Keep the given description's facts if present.
 - language: ISO 639-1 code of the book's language.
-Never invent ISBNs, authors or titles.`
+- isbn, publisher, year, pages: copy them from the web results only when a result is clearly about this same book
+  (same title and author); otherwise null. Never guess these.
+Web results can be about other books or editions; ignore those. Never invent ISBNs, authors or titles.`
 
 export const ENRICH_SCHEMA = {
   type: 'object',
@@ -92,11 +96,15 @@ export const ENRICH_SCHEMA = {
     tags: { type: 'array', items: { type: 'string' } },
     description: { type: 'string' },
     language: { type: 'string' },
+    isbn: { type: ['string', 'null'] },
+    publisher: { type: ['string', 'null'] },
+    year: { type: ['integer', 'null'] },
+    pages: { type: ['integer', 'null'] },
   },
-  required: ['categories', 'tags', 'description', 'language'],
+  required: ['categories', 'tags', 'description', 'language', 'isbn', 'publisher', 'year', 'pages'],
 }
 
-export function buildEnrichUser(draft: IBookDraft): string {
+export function buildEnrichUser(draft: IBookDraft, web: IWebResult[] = []): string {
   return JSON.stringify({
     title: draft.title,
     subtitle: draft.subtitle,
@@ -105,6 +113,7 @@ export function buildEnrichUser(draft: IBookDraft): string {
     year: draft.publishedYear,
     subjects: draft.categories,
     description: draft.description?.slice(0, 1500) ?? null,
+    ...(web.length ? { web: web.map(r => ({ title: r.title, snippet: r.snippet })) } : {}),
   })
 }
 
@@ -113,6 +122,15 @@ export interface IEnrichment {
   tags: string[]
   description: string | null
   language: string | null
+  isbn13: string | null
+  publisher: string | null
+  publishedYear: number | null
+  pages: number | null
+}
+
+function whole(value: unknown, min: number, max: number): number | null {
+  const n = typeof value === 'string' ? Number(value.trim()) : value
+  return typeof n === 'number' && Number.isInteger(n) && n >= min && n <= max ? n : null
 }
 
 function strings(value: unknown, limit: number, transform: (s: string) => string): string[] {
@@ -131,10 +149,14 @@ function strings(value: unknown, limit: number, transform: (s: string) => string
   return out.slice(0, limit)
 }
 
-/** Validates an enrichment reply; anything malformed is dropped rather than trusted. */
-export function parseEnrichment(raw: unknown): IEnrichment {
+/**
+ * Validates an enrichment reply; anything malformed is dropped rather than trusted. The ISBN must also be one that was
+ * actually printed in the web results (`groundedIsbns`), so a model can't make one up.
+ */
+export function parseEnrichment(raw: unknown, groundedIsbns: ReadonlySet<string> = new Set()): IEnrichment {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   const description = typeof obj.description === 'string' ? obj.description.trim().slice(0, 600) : ''
+  const isbn = typeof obj.isbn === 'string' ? normalizeIsbn(obj.isbn) : null
   const language = typeof obj.language === 'string' && /^[a-z]{2}$/i.test(obj.language.trim())
     ? obj.language.trim().toLowerCase()
     : null
@@ -143,6 +165,10 @@ export function parseEnrichment(raw: unknown): IEnrichment {
     tags: strings(obj.tags, 6, s => s.toLowerCase().replace(/^#/, '')),
     description: description || null,
     language,
+    isbn13: isbn && groundedIsbns.has(isbn.isbn13) ? isbn.isbn13 : null,
+    publisher: typeof obj.publisher === 'string' && obj.publisher.trim().length <= 100 ? obj.publisher.trim() || null : null,
+    publishedYear: whole(obj.year, 1450, new Date().getFullYear() + 1),
+    pages: whole(obj.pages, 1, 10_000),
   }
 }
 

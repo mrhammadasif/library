@@ -60,6 +60,12 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   (`GOOGLE_BOOKS_DAILY_LIMIT`, under the key's 1,000). When spent, or with no key, lookups use Open Library only.
   Shared fetchers take `IGoogleBooks { apiKey, take }` or null. Tags/categories are also derived from subject headings
   (`suggestTags`, `categoryPath`, `subjectCategories` in shared/metadata.ts) so they fill in without AI.
+- Web search during AI enrichment: when the draft still has gaps (`needsWebSearch`), `AiService.enrich` queries
+  **SearXNG** (`SEARXNG_URL`, default `http://searxng:8080`: n8n's internal instance on `n8n_default`, JSON format on,
+  no public route) and adds up to 6 snippets to the prompt. The AI then also returns isbn/publisher/year/pages; an ISBN is
+  kept only if it appears in a result (`isbnsInResults`, checksum-valid), year/pages are range-checked, and the app only
+  fills blank, untouched fields. SearXNG's upstream engines get rate-limited (one residential IP shared with n8n), so an
+  empty answer is retried once, and searches only happen on user-triggered enrichment.
 - Covers: `POST /covers/presign` → the app PUTs the JPEG straight to Garage (`library-covers` bucket); key
   `{library}/{book}-{ts}.jpg`. The S3Client must use `requestChecksumCalculation: 'WHEN_REQUIRED'` (Garage rejects SDK CRC32).
 

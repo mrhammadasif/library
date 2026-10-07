@@ -1,13 +1,16 @@
 import type { IAiProviderConfigDto } from '../../../shared/contracts/Ai'
 import type { IBookDraft } from '../../../shared/metadata'
+import type { IAppConfig } from '../config/AppConfig'
 import type { IMembership } from '../auth/Access'
 import type { AiProvider, PrismaClient } from '../generated/prisma/client'
-import { Injectable } from '@nestjs/common'
+import { Inject, Injectable } from '@nestjs/common'
 import { buildEnrichUser, chatJson, ENRICH_SCHEMA, ENRICH_SYSTEM, IDENTIFY_SCHEMA, IDENTIFY_SYSTEM, parseEnrichment, parseIdentification } from '../../../shared/ai'
 import { normalizeIsbn } from '../../../shared/isbn'
 import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata'
+import { bookQuery, isbnsInResults, needsWebSearch, searchWeb } from '../../../shared/webSearch'
 import { requirePermission } from '../auth/Permissions'
 import { GoogleBooksBudget } from '../books-budget/GoogleBooksBudget'
+import { APP_CONFIG } from '../config/AppConfig'
 import { DomainError, notFound } from '../common/DomainError'
 import { InjectPrisma } from '../prisma/Prisma'
 import { AiKeyCipher } from './AiKeyCipher'
@@ -22,6 +25,7 @@ export class AiService {
     private readonly cipher: AiKeyCipher,
     private readonly ollama: OllamaClient,
     private readonly googleBooks: GoogleBooksBudget,
+    @Inject(APP_CONFIG) private readonly config: IAppConfig,
   ) {}
 
   async providers(libraryId: string): Promise<IAiProviderConfigDto[]> {
@@ -81,21 +85,25 @@ export class AiService {
     await this.prisma.library.update({ where: { id: libraryId }, data: { enrichProvider: usage.enrich, visionProvider: usage.vision } })
   }
 
-  /** Tag/category/description suggestions: the library's enrich provider, else Home AI when the admin allowed it. */
+  /**
+   * Tag/category/description suggestions: the library's enrich provider, else Home AI when the admin allowed it.
+   * When the book databases left gaps (no ISBN, publisher, year…), the AI also reads web search results (SearXNG) and
+   * fills them; an ISBN is only accepted if it was printed in one of those results.
+   */
   async enrich(m: IMembership, draft: IBookDraft) {
     if (!m.permissions.includes('books.add')) {
       requirePermission(m, 'books.edit')
     }
     const library = await this.library(m.libraryId)
-    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft), schema: ENRICH_SCHEMA, timeoutMs: 90_000 }
-    if (library.enrichProvider) {
-      const config = await this.providerConfig(m.libraryId, library.enrichProvider)
-      return { enrichment: parseEnrichment(await chatJson(config, request)), provider: library.enrichProvider as string }
+    if (!library.enrichProvider && !library.homeAiAllowed) {
+      throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
     }
-    if (library.homeAiAllowed) {
-      return { enrichment: parseEnrichment(await this.ollama.chatJson(request)), provider: 'home' }
-    }
-    throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
+    const web = this.config.SEARXNG_URL && needsWebSearch(draft) ? await searchWeb(this.config.SEARXNG_URL, bookQuery(draft)) : []
+    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 90_000 }
+    const raw = library.enrichProvider
+      ? await chatJson(await this.providerConfig(m.libraryId, library.enrichProvider), request)
+      : await this.ollama.chatJson(request)
+    return { enrichment: parseEnrichment(raw, isbnsInResults(web)), provider: library.enrichProvider ?? 'home' }
   }
 
   /** Reads a cover photo with the library's vision provider, then finds matching editions online. */

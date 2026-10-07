@@ -21,8 +21,9 @@ describe('ai', () => {
       tags: ['desert', 'politics'],
       description: 'A story.',
       language: 'en',
+      isbn13: null, publisher: null, publishedYear: null, pages: null,
     })
-    expect(parseEnrichment(null)).toEqual({ categories: [], tags: [], description: null, language: null })
+    expect(parseEnrichment(null)).toEqual({ categories: [], tags: [], description: null, language: null, isbn13: null, publisher: null, publishedYear: null, pages: null })
     expect(parseEnrichment({ language: 'english' }).language).toBeNull()
   })
 
@@ -48,5 +49,22 @@ describe('ai', () => {
     expect(baseUrlFor({ provider: 'openai', model: 'm', baseUrl: null, apiKey: 'k' })).toBe('https://api.openai.com/v1')
     expect(baseUrlFor({ provider: 'gemini', model: 'm', baseUrl: null, apiKey: 'k' })).toContain('generativelanguage')
     expect(baseUrlFor({ provider: 'openai_compatible', model: 'm', baseUrl: 'https://gw/v1', apiKey: 'k' })).toBe('https://gw/v1')
+  })
+
+  it('accepts web facts only when they check out', () => {
+    const reply = { categories: ['Islamic'], tags: ['children'], description: 'Stories.', language: 'en', isbn: '978-1-999802-75-2', publisher: ' Watson ', year: '2021', pages: 64 }
+    // ISBN printed in a search result → kept; same reply without that grounding → dropped.
+    expect(parseEnrichment(reply, new Set(['9781999802752']))).toMatchObject({ isbn13: '9781999802752', publisher: 'Watson', publishedYear: 2021, pages: 64 })
+    expect(parseEnrichment(reply).isbn13).toBeNull()
+    expect(parseEnrichment({ ...reply, isbn: '9781999802753' }, new Set(['9781999802753'])).isbn13).toBeNull()
+    expect(parseEnrichment({ ...reply, year: 3000, pages: 0 })).toMatchObject({ publishedYear: null, pages: null })
+    expect(parseEnrichment({ ...reply, year: 2001.5, pages: '12 pages' })).toMatchObject({ publishedYear: null, pages: null })
+  })
+
+  it('adds web results to the enrichment prompt only when there are some', () => {
+    const draft = { ...emptyDraft(), title: 'Dune' }
+    expect(JSON.parse(buildEnrichUser(draft))).not.toHaveProperty('web')
+    const user = JSON.parse(buildEnrichUser(draft, [{ title: 'Dune - Ace', url: 'https://x', snippet: 'ISBN 9780441172719' }]))
+    expect(user.web).toEqual([{ title: 'Dune - Ace', snippet: 'ISBN 9780441172719' }])
   })
 })
