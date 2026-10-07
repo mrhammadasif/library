@@ -53,8 +53,11 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   - Gotcha: sending the OTP on sign-up needs `emailVerification.sendOnSignUp` when `overrideDefaultEmailVerification` is set.
   - Passkeys are phase 2; the table already exists.
 - AI: per-library OpenAI/Gemini/self-hosted keys sealed with AES-256-GCM (`AI_KEYS_KEY`, never returned). Enrichment uses the
-  library's provider, else **Home AI** (direct Ollama `/api/chat`, `format` schema, `think:false`, queued one at a time)
-  when the server admin (`ADMIN_EMAILS`) allowed it for that library. Cover recognition needs a vision provider (OpenAI/Gemini).
+  library's provider, else **Home AI** when the server admin (`ADMIN_EMAILS`) allowed it for that library. Home AI is the
+  home server's **OmniRoute** gateway (OpenAI-compatible, `HOME_AI_BASE_URL` = `https://omniroute.home.nitroxis.com/v1`,
+  `HOME_AI_API_KEY`, model `HOME_AI_MODEL` = `gemini-3.1-flash-lite`): about 6–25 s per book with web results. Direct
+  Ollama was dropped (2026-10-07): on the CPU-only i3 it took 90 s (0.8B) to 400–580 s (4B) per enrichment. OmniRoute can
+  still route to Ollama if wanted. Cover recognition needs a vision provider (OpenAI/Gemini).
 - Google Books: every request goes through `GoogleBooksBudget` (`books-budget/`): a Postgres counter per **Pacific** day
   (Google's quota day), taken atomically (`INSERT … ON CONFLICT DO UPDATE … WHERE count < limit`), default 900/day
   (`GOOGLE_BOOKS_DAILY_LIMIT`, under the key's 1,000). When spent, or with no key, lookups use Open Library only.
@@ -63,11 +66,11 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - Web search during AI enrichment: when the draft still has gaps (`needsWebSearch`), `AiService.enrich` queries the
   home **SearXNG** (`SEARXNG_URL` = `https://searxng.home.nitroxis.com`, locked: `SEARXNG_API_KEY` sent as `X-API-Key`;
   it has no internal route to the API) and keeps only the ≤3 results whose text matches the title (`relevantResults`),
-  snippets ≤200 chars. Prompts stay small because Home AI runs on a CPU-only i3: a ~1,500-token search prompt took
-  400–580 s on the 4B model, so Home AI stays on Qwen3.5-0.8B (shared with n8n, financy and OmniRoute). Ollama calls set `num_predict` 300 / `num_ctx` 4096.
+  snippets ≤200 chars (cheap and fast whatever the model).
   The AI also returns isbn/publisher/year/pages. An ISBN is kept only if it's printed in a relevant result
   (`isbnsInResults`, checksum-valid); exactly one such ISBN is used even if the AI names none. Year/pages are
-  range-checked, and the app only fills blank, untouched fields. Searches happen only on user-triggered enrichment, with
+  range-checked, and the app only fills blank, untouched fields. When the AI finds a new ISBN, the app looks it up and
+  that record's publisher/year/pages win (web snippets can describe another edition); the AI's values are the fallback. Searches happen only on user-triggered enrichment, with
   one retry on an empty answer (upstream engines get rate-limited).
 - Covers: `POST /covers/presign` → the app PUTs the JPEG straight to Garage (`library-covers` bucket); key
   `{library}/{book}-{ts}.jpg`. The S3Client must use `requestChecksumCalculation: 'WHEN_REQUIRED'` (Garage rejects SDK CRC32).
@@ -96,7 +99,7 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - Prisma: edit `server/prisma/schema.prisma`, then `npx prisma migrate dev --create-only` against a dev DB and hand-add any
   CHECKs/extensions. `npx prisma generate` writes `server/src/generated/prisma` (gitignored).
 - Deploy: a Coolify Docker Compose resource "library-api" with base dir `/server` and compose file `/docker-compose.coolify.yml`
-  (api only; networks default + `n8n_default`). Postgres 17 is the shared Coolify database "nitroxis-pg" (project "common",
+  (api only; default network: Home AI and SearXNG are reached via their public URLs + keys). Postgres 17 is the shared Coolify database "nitroxis-pg" (project "common",
   container `mgpp9dnk3gikz7hdfhazv7ev`; database + non-superuser role `library`, `pg_trgm` pre-created by the superuser),
   reached over the `coolify` network ("Connect To Predefined Network") via `DATABASE_URL`. Coolify app uuid `bhidfqpixbpmtniphkxm62ln`, domain `https://api.library.home.nitroxis.com`. The container runs `prisma migrate deploy` on start.
 - Device e2e (Maestro, `.maestro/`): boot an emulator, build the release APK (`cd android && ./gradlew assembleRelease`;

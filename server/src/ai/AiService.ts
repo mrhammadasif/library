@@ -1,3 +1,4 @@
+import type { IAiConfig } from '../../../shared/ai'
 import type { IAiProviderConfigDto } from '../../../shared/contracts/Ai'
 import type { IBookDraft } from '../../../shared/metadata'
 import type { IAppConfig } from '../config/AppConfig'
@@ -14,7 +15,6 @@ import { APP_CONFIG } from '../config/AppConfig'
 import { DomainError, notFound } from '../common/DomainError'
 import { InjectPrisma } from '../prisma/Prisma'
 import { AiKeyCipher } from './AiKeyCipher'
-import { OllamaClient } from './Ollama'
 
 const VISION_BY_DEFAULT: AiProvider[] = ['openai', 'gemini']
 
@@ -23,7 +23,6 @@ export class AiService {
   constructor(
     @InjectPrisma() private readonly prisma: PrismaClient,
     private readonly cipher: AiKeyCipher,
-    private readonly ollama: OllamaClient,
     private readonly googleBooks: GoogleBooksBudget,
     @Inject(APP_CONFIG) private readonly config: IAppConfig,
   ) {}
@@ -95,19 +94,23 @@ export class AiService {
       requirePermission(m, 'books.edit')
     }
     const library = await this.library(m.libraryId)
-    if (!library.enrichProvider && !library.homeAiAllowed) {
+    const home = library.homeAiAllowed ? this.homeAi() : null
+    if (!library.enrichProvider && !home) {
       throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
     }
     const web = this.config.SEARXNG_URL && needsWebSearch(draft)
       ? relevantResults(draft, await searchWeb(this.config.SEARXNG_URL, bookQuery(draft), { apiKey: this.config.SEARXNG_API_KEY }))
       : []
-    // Home AI is a small model on a CPU-only box, queued one request at a time behind other apps' calls: a live call with
-    // web results took ~93 s, so allow headroom.
-    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 180_000 }
-    const raw = library.enrichProvider
-      ? await chatJson(await this.providerConfig(m.libraryId, library.enrichProvider), request)
-      : await this.ollama.chatJson(request)
+    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 60_000 }
+    const config = library.enrichProvider ? await this.providerConfig(m.libraryId, library.enrichProvider) : home!
+    const raw = await chatJson(config, request)
     return { enrichment: parseEnrichment(raw, isbnsInResults(web)), provider: library.enrichProvider ?? 'home' }
+  }
+
+  /** The server's Home AI gateway (OmniRoute by default), or null when no key is configured. */
+  private homeAi(): IAiConfig | null {
+    const { HOME_AI_API_KEY: apiKey, HOME_AI_BASE_URL: baseUrl, HOME_AI_MODEL: model } = this.config
+    return apiKey ? { provider: 'openai_compatible', baseUrl, apiKey, model } : null
   }
 
   /** Reads a cover photo with the library's vision provider, then finds matching editions online. */

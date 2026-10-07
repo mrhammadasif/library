@@ -61,6 +61,9 @@ describe('ai', () => {
     expect(parseEnrichment({ ...reply, isbn: null }, new Set(['9781999802752'])).isbn13).toBe('9781999802752')
     expect(parseEnrichment({ ...reply, isbn: null }, new Set(['9781999802752', '9780441172719'])).isbn13).toBeNull()
     expect(parseEnrichment({ ...reply, year: 3000, pages: 0 })).toMatchObject({ publishedYear: null, pages: null })
+    // Models sometimes write "null" as text.
+    expect(parseEnrichment({ ...reply, publisher: 'null' }).publisher).toBeNull()
+    expect(parseEnrichment({ ...reply, publisher: 'Unknown' }).publisher).toBeNull()
     expect(parseEnrichment({ ...reply, year: 2001.5, pages: '12 pages' })).toMatchObject({ publishedYear: null, pages: null })
   })
 

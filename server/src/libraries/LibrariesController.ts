@@ -44,7 +44,7 @@ export class LibrariesController {
     return this.libraries.remove(membership)
   }
 
-  /** Server admin only: lets a library use the home server's Ollama. Needn't be a member. */
+  /** Server admin only: lets a library use the server's Home AI (OmniRoute). Needn't be a member. */
   @Put(':libraryId/home-ai')
   @HttpCode(204)
   async homeAi(@Session() session: UserSession, @Param('libraryId', ParseUUIDPipe) libraryId: string, @Body() body: HomeAiDto) {

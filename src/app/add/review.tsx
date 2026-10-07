@@ -1,5 +1,5 @@
 import type { IBookFields } from '~/models/IBook'
-import type { IBookDraft } from '~/models/IBookDraft'
+import type { IBookDraft, IEnrichment } from '~/models/IBookDraft'
 import type { ILookupResult } from '~/hooks/Lookup'
 import { randomUUID } from 'expo-crypto'
 import { router, useLocalSearchParams } from 'expo-router'
@@ -129,34 +129,37 @@ export default function ReviewScreen() {
     setAi('working')
     enrichDraft(library.id, fieldsToDraft(base))
       .then(({ enrichment }) => {
-        setFields(current => applyEnrichment(current, enrichment, touched.current))
+        const foundIsbn = enrichment.isbn13 && !base.isbn13 ? enrichment.isbn13 : null
+        // With a new ISBN, its database record is the better source for edition facts (web snippets can be about another
+        // edition), so those wait for the lookup and the AI's values are only the fallback.
+        const now = foundIsbn ? { ...enrichment, publisher: null, publishedYear: null, pages: null } : enrichment
+        setFields(current => applyEnrichment(current, now, touched.current))
         setAi('done')
-        // The AI found the ISBN on the web: the book databases may know the rest (and whether it's already here).
-        if (enrichment.isbn13 && !base.isbn13) {
-          fillFromIsbn(enrichment.isbn13)
+        if (foundIsbn) {
+          fillFromIsbn(foundIsbn, enrichment)
         }
       })
       .catch(() => setAi('failed'))
   }
 
-  function fillFromIsbn(isbn13: string) {
+  /** Fills blank, untouched fields from the ISBN's database record, falling back to what the AI read on the web. */
+  function fillFromIsbn(isbn13: string, fallback: Pick<IEnrichment, 'publisher' | 'publishedYear' | 'pages'>) {
+    const fill = (found: Partial<IBookFields>) => setFields((current) => {
+      const next = { ...current }
+      for (const key of ['publisher', 'publishedYear', 'pages', 'subtitle', 'description', 'language'] as const) {
+        const value = found[key] ?? (key in fallback ? fallback[key as keyof typeof fallback] : null)
+        if (!touched.current.has(key) && !current[key] && value) {
+          Object.assign(next, { [key]: value })
+        }
+      }
+      return next
+    })
     lookupIsbn(library.id, isbn13)
       .then((result) => {
         setLookup({ loading: false, result: { ...result, candidates: [] }, error: null })
-        if (result.draft) {
-          const found = draftToFields(result.draft)
-          setFields((current) => {
-            const next = { ...current }
-            for (const key of ['publisher', 'publishedYear', 'pages', 'subtitle', 'description', 'language'] as const) {
-              if (!touched.current.has(key) && !current[key] && found[key]) {
-                Object.assign(next, { [key]: found[key] })
-              }
-            }
-            return next
-          })
-        }
+        fill(result.draft ? draftToFields(result.draft) : {})
       })
-      .catch(() => {})
+      .catch(() => fill({}))
   }
 
   function detectColor(uri: string) {

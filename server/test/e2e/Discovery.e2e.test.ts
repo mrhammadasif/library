@@ -124,18 +124,19 @@ describe('search, stats, lookup, AI and covers', () => {
       expect((fetchMock.mock.calls[0] as unknown as [string, RequestInit])[1].headers).toMatchObject({ Authorization: 'Bearer sk-secret-123' })
     })
 
-    it('falls back to Home AI (direct Ollama) only when the admin allowed it', async () => {
+    it('falls back to Home AI (OmniRoute) only when the admin allowed it', async () => {
       const draft = { ...BOOK('Dune'), coverUrl: null }
       const off = await t.http().post(`${base()}/ai/enrich`).set('Cookie', owner.cookie).send({ draft }).expect(409)
       expect(off.body.code).toBe('ai_not_configured')
       await t.db.prisma.library.update({ where: { id: lib }, data: { homeAiAllowed: true } })
-      const fetchMock = vi.fn(async () => respond({ message: { content: '{"categories":[],"tags":["spice"],"description":"","language":"en"}' } }))
+      const fetchMock = vi.fn(async () => respond({ choices: [{ message: { content: '{"categories":[],"tags":["spice"],"description":"","language":"en"}' } }] }))
       vi.stubGlobal('fetch', fetchMock)
       const res = await t.http().post(`${base()}/ai/enrich`).set('Cookie', owner.cookie).send({ draft }).expect(200)
       expect(res.body).toMatchObject({ provider: 'home', enrichment: { tags: ['spice'] } })
       const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-      expect(url).toBe('http://ollama.test:11434/api/chat')
-      expect(JSON.parse(init.body as string)).toMatchObject({ think: false, stream: false, format: expect.any(Object) })
+      expect(url).toBe('http://home-ai.test/v1/chat/completions')
+      expect(init.headers).toMatchObject({ Authorization: 'Bearer test-home-ai-key' })
+      expect(JSON.parse(init.body as string)).toMatchObject({ model: 'gemini-3.1-flash-lite', response_format: { type: 'json_schema' } })
     })
 
     it('needs books.add or books.edit to enrich, and a vision provider to identify covers', async () => {

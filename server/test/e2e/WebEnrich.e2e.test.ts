@@ -1,4 +1,4 @@
-// TEST DATA ONLY. AI enrichment reading SearXNG web results; outbound HTTP (SearXNG, Ollama) is stubbed.
+// TEST DATA ONLY. AI enrichment reading SearXNG web results; outbound HTTP (SearXNG, Home AI) is stubbed.
 import type { ITestUser } from '../setup/Fixtures'
 import type { ITestApp } from '../setup/TestApp'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,7 +12,7 @@ function respond(body: unknown) {
 const WEB = { results: [{ title: 'Stories from the Battles of the Prophet Muhammad', url: 'https://shop.test/b', content: 'Yasmin G. Watson · ISBN 978-1-999802-75-2 · 2021 · 64 pages' }] }
 
 function aiReply(isbn: string) {
-  return { message: { content: JSON.stringify({ categories: ['Islamic', 'Children'], tags: ['muhammad', 'stories'], description: 'Battles of the Prophet, retold for children.', language: 'en', isbn, publisher: 'Watson', year: 2021, pages: 64 }) } }
+  return { choices: [{ message: { content: JSON.stringify({ categories: ['Islamic', 'Children'], tags: ['muhammad', 'stories'], description: 'Battles of the Prophet, retold for children.', language: 'en', isbn, publisher: 'Watson', year: 2021, pages: 64 }) } }] }
 }
 
 describe('ai enrichment with web search', () => {
@@ -53,19 +53,17 @@ describe('ai enrichment with web search', () => {
     expect(res.body.enrichment.isbn13).toBe('9781999802752')
   })
 
-  it('sends the SearXNG key and caps the Ollama answer', async () => {
+  it('sends the SearXNG key with the search', async () => {
     const fetchMock = stub(aiReply(''))
     await t.http().post(`/api/libraries/${lib}/ai/enrich`).set('Cookie', owner.cookie).send({ draft }).expect(200)
     const [, searchInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(searchInit.headers).toMatchObject({ 'X-API-Key': 'test-searxng-key' })
-    const body = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string)
-    expect(body.options).toEqual({ temperature: 0, num_predict: 300, num_ctx: 4096 })
   })
 
   it('skips the web search when the book is already complete', async () => {
     const fetchMock = stub(aiReply(''))
     const complete = { ...draft, isbn13: '9781999802752', publisher: 'Watson', publishedYear: 2021, pages: 64, description: 'Known.', categories: ['Islamic'] }
     await t.http().post(`/api/libraries/${lib}/ai/enrich`).set('Cookie', owner.cookie).send({ draft: complete }).expect(200)
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(['http://ollama.test:11434/api/chat'])
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(['http://home-ai.test/v1/chat/completions'])
   })
 })

@@ -1,5 +1,5 @@
 // AI providers through one OpenAI-compatible Chat Completions adapter: OpenAI, Gemini (its /openai endpoint) and
-// any OpenAI-compatible gateway (e.g. OmniRoute in front of the home-server Ollama). Prompt builders and response
+// any OpenAI-compatible gateway (e.g. the home server's OmniRoute, which also serves Home AI). Prompt builders and response
 // parsing are pure and unit-tested.
 import type { IBookDraft } from './metadata.ts'
 import type { IWebResult } from './webSearch.ts'
@@ -77,7 +77,7 @@ export async function chatJson(config: IAiConfig, request: IChatRequest): Promis
 
 // ─── Metadata enrichment ────────────────────────────────────────────────────
 
-// Kept constant so local models (Ollama) can reuse the KV cache for the prefix across calls.
+// Kept constant so providers can cache the prompt prefix across calls.
 export const ENRICH_SYSTEM = `You are a librarian cataloguing books in a home library.
 Given what is known about a book, and possibly web search results about it, reply with ONLY a JSON object:
 {"categories": string[], "tags": string[], "description": string, "language": string, "isbn": string|null, "publisher": string|null, "year": number|null, "pages": number|null}
@@ -167,7 +167,9 @@ export function parseEnrichment(raw: unknown, groundedIsbns: ReadonlySet<string>
     language,
     // A grounded pick from the AI wins; if it named none but the results print exactly one ISBN, that one is unambiguous.
     isbn13: isbn && groundedIsbns.has(isbn.isbn13) ? isbn.isbn13 : groundedIsbns.size === 1 ? [...groundedIsbns][0] : null,
-    publisher: typeof obj.publisher === 'string' && obj.publisher.trim().length <= 100 ? obj.publisher.trim() || null : null,
+    publisher: typeof obj.publisher === 'string' && obj.publisher.trim().length <= 100 && !/^(null|none|unknown|n\/?a|-)?$/i.test(obj.publisher.trim())
+      ? obj.publisher.trim()
+      : null,
     publishedYear: whole(obj.year, 1450, new Date().getFullYear() + 1),
     pages: whole(obj.pages, 1, 10_000),
   }

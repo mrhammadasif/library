@@ -35,7 +35,8 @@ export async function createTestApp(env: Record<string, string> = {}): Promise<I
     S3_ACCESS_KEY_ID: 'test-key',
     S3_SECRET_ACCESS_KEY: 'test-secret',
     COVERS_PUBLIC_URL: 'https://covers.test.local',
-    OLLAMA_URL: 'http://ollama.test:11434',
+    HOME_AI_BASE_URL: 'http://home-ai.test/v1',
+    HOME_AI_API_KEY: 'test-home-ai-key',
     // Outbound HTTP is stubbed in tests; a key makes lookups try Google (without one, Google is skipped).
     GOOGLE_BOOKS_API_KEY: 'test-books-key',
     ...env,
