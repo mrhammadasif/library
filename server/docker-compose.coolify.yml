@@ -29,7 +29,7 @@ services:
       # The home SearXNG (locked; its own Coolify network), reached via its public URL + API key.
       SEARXNG_URL: ${SEARXNG_URL:-https://searxng.home.nitroxis.com}
       SEARXNG_API_KEY: ${SEARXNG_API_KEY:-}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-hf.co/unsloth/Qwen3.5-4B-GGUF:UD-Q4_K_XL}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-hf.co/unsloth/Qwen3.5-0.8B-GGUF:UD-Q4_K_XL}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       AI_KEYS_KEY: ${AI_KEYS_KEY}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}

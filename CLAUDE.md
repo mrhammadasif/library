@@ -64,7 +64,7 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   home **SearXNG** (`SEARXNG_URL` = `https://searxng.home.nitroxis.com`, locked: `SEARXNG_API_KEY` sent as `X-API-Key`;
   it has no internal route to the API) and keeps only the ≤3 results whose text matches the title (`relevantResults`),
   snippets ≤200 chars. Prompts stay small because Home AI runs on a CPU-only i3: a ~1,500-token search prompt took
-  400–580 s on the 4B model. Ollama calls set `num_predict` 300 / `num_ctx` 4096.
+  400–580 s on the 4B model, so Home AI stays on Qwen3.5-0.8B (shared with n8n, financy and OmniRoute). Ollama calls set `num_predict` 300 / `num_ctx` 4096.
   The AI also returns isbn/publisher/year/pages. An ISBN is kept only if it's printed in a relevant result
   (`isbnsInResults`, checksum-valid); exactly one such ISBN is used even if the AI names none. Year/pages are
   range-checked, and the app only fills blank, untouched fields. Searches happen only on user-triggered enrichment, with
