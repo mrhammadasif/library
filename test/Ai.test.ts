@@ -56,7 +56,10 @@ describe('ai', () => {
     // ISBN printed in a search result → kept; same reply without that grounding → dropped.
     expect(parseEnrichment(reply, new Set(['9781999802752']))).toMatchObject({ isbn13: '9781999802752', publisher: 'Watson', publishedYear: 2021, pages: 64 })
     expect(parseEnrichment(reply).isbn13).toBeNull()
-    expect(parseEnrichment({ ...reply, isbn: '9781999802753' }, new Set(['9781999802753'])).isbn13).toBeNull()
+    expect(parseEnrichment({ ...reply, isbn: '9781999802753' }, new Set(['9781999802753', '9780441172719'])).isbn13).toBeNull()
+    // The AI named nothing usable, but the results print exactly one ISBN: that one is unambiguous.
+    expect(parseEnrichment({ ...reply, isbn: null }, new Set(['9781999802752'])).isbn13).toBe('9781999802752')
+    expect(parseEnrichment({ ...reply, isbn: null }, new Set(['9781999802752', '9780441172719'])).isbn13).toBeNull()
     expect(parseEnrichment({ ...reply, year: 3000, pages: 0 })).toMatchObject({ publishedYear: null, pages: null })
     expect(parseEnrichment({ ...reply, year: 2001.5, pages: '12 pages' })).toMatchObject({ publishedYear: null, pages: null })
   })

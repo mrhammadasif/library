@@ -165,7 +165,8 @@ export function parseEnrichment(raw: unknown, groundedIsbns: ReadonlySet<string>
     tags: strings(obj.tags, 6, s => s.toLowerCase().replace(/^#/, '')),
     description: description || null,
     language,
-    isbn13: isbn && groundedIsbns.has(isbn.isbn13) ? isbn.isbn13 : null,
+    // A grounded pick from the AI wins; if it named none but the results print exactly one ISBN, that one is unambiguous.
+    isbn13: isbn && groundedIsbns.has(isbn.isbn13) ? isbn.isbn13 : groundedIsbns.size === 1 ? [...groundedIsbns][0] : null,
     publisher: typeof obj.publisher === 'string' && obj.publisher.trim().length <= 100 ? obj.publisher.trim() || null : null,
     publishedYear: whole(obj.year, 1450, new Date().getFullYear() + 1),
     pages: whole(obj.pages, 1, 10_000),

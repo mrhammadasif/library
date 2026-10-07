@@ -13,8 +13,10 @@ interface ISearxngResponse {
   results?: { title?: string, url?: string, content?: string }[]
 }
 
-const MAX_RESULTS = 6
-const MAX_SNIPPET = 300
+// Small on purpose: Home AI is a CPU-only model and every prompt token costs time (search prompts never hit its cache).
+const MAX_RESULTS = 3
+const MAX_SNIPPET = 200
+const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'from', 'book', 'books', 'edition'])
 
 /** Web search worth doing only when the book databases left something out. */
 export function needsWebSearch(draft: IBookDraft): boolean {
@@ -32,20 +34,26 @@ export function bookQuery(draft: IBookDraft): string {
  * GET {baseUrl}/search?format=json (SearXNG needs `json` in `search.formats`). Its upstream engines get rate-limited
  * now and then and answer with nothing, so an empty answer is retried once after a short pause. Errors give [].
  */
-export async function searchWeb(baseUrl: string, query: string, { timeoutMs = 8000, retryDelayMs = 1500 } = {}): Promise<IWebResult[]> {
-  const first = await searchOnce(baseUrl, query, timeoutMs)
+export async function searchWeb(
+  baseUrl: string,
+  query: string,
+  { apiKey, timeoutMs = 8000, retryDelayMs = 1500 }: { apiKey?: string, timeoutMs?: number, retryDelayMs?: number } = {},
+): Promise<IWebResult[]> {
+  const first = await searchOnce(baseUrl, query, apiKey, timeoutMs)
   if (first.length || retryDelayMs < 0) {
     return first
   }
   await new Promise(resolve => setTimeout(resolve, retryDelayMs))
-  return searchOnce(baseUrl, query, timeoutMs)
+  return searchOnce(baseUrl, query, apiKey, timeoutMs)
 }
 
-async function searchOnce(baseUrl: string, query: string, timeoutMs: number): Promise<IWebResult[]> {
+/** Raw results (up to 20); `relevantResults` picks the few worth showing the AI. */
+async function searchOnce(baseUrl: string, query: string, apiKey: string | undefined, timeoutMs: number): Promise<IWebResult[]> {
   const params = new URLSearchParams({ q: query, format: 'json', categories: 'general', safesearch: '1' })
   try {
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/search?${params}`, {
-      headers: { Accept: 'application/json' },
+      // The home SearXNG is locked: API clients pass its key in this header.
+      headers: { Accept: 'application/json', ...(apiKey ? { 'X-API-Key': apiKey } : {}) },
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!response.ok) {
@@ -55,7 +63,7 @@ async function searchOnce(baseUrl: string, query: string, timeoutMs: number): Pr
     const data = await response.json() as ISearxngResponse
     return (data.results ?? [])
       .filter(r => r.title && r.url)
-      .slice(0, MAX_RESULTS)
+      .slice(0, 20)
       .map(r => ({
         title: r.title!.trim().slice(0, 200),
         url: r.url!,
@@ -66,6 +74,30 @@ async function searchOnce(baseUrl: string, query: string, timeoutMs: number): Pr
     console.warn(`Web search failed: ${(error as Error).message}`)
     return []
   }
+}
+
+function words(text: string): string[] {
+  return text.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w.length >= 3 && !STOPWORDS.has(w))
+}
+
+/**
+ * The few results that are clearly about this book: most of its title words appear in the result, best match first.
+ * Keeps the AI prompt short and stops ISBNs of other books from counting as evidence.
+ */
+export function relevantResults(draft: IBookDraft, results: IWebResult[]): IWebResult[] {
+  const titleWords = [...new Set(words(draft.title))]
+  if (!titleWords.length) {
+    return []
+  }
+  return results
+    .map((r) => {
+      const text = new Set(words(`${r.title} ${r.snippet}`))
+      return { r, score: titleWords.filter(w => text.has(w)).length / titleWords.length }
+    })
+    .filter(x => x.score >= 0.75)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, MAX_RESULTS)
+    .map(x => x.r)
 }
 
 /** Every valid ISBN printed in the results, as ISBN-13. The AI may only pick an ISBN from this set. */

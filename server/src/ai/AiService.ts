@@ -7,7 +7,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { buildEnrichUser, chatJson, ENRICH_SCHEMA, ENRICH_SYSTEM, IDENTIFY_SCHEMA, IDENTIFY_SYSTEM, parseEnrichment, parseIdentification } from '../../../shared/ai'
 import { normalizeIsbn } from '../../../shared/isbn'
 import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata'
-import { bookQuery, isbnsInResults, needsWebSearch, searchWeb } from '../../../shared/webSearch'
+import { bookQuery, isbnsInResults, needsWebSearch, relevantResults, searchWeb } from '../../../shared/webSearch'
 import { requirePermission } from '../auth/Permissions'
 import { GoogleBooksBudget } from '../books-budget/GoogleBooksBudget'
 import { APP_CONFIG } from '../config/AppConfig'
@@ -98,7 +98,9 @@ export class AiService {
     if (!library.enrichProvider && !library.homeAiAllowed) {
       throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
     }
-    const web = this.config.SEARXNG_URL && needsWebSearch(draft) ? await searchWeb(this.config.SEARXNG_URL, bookQuery(draft)) : []
+    const web = this.config.SEARXNG_URL && needsWebSearch(draft)
+      ? relevantResults(draft, await searchWeb(this.config.SEARXNG_URL, bookQuery(draft), { apiKey: this.config.SEARXNG_API_KEY }))
+      : []
     // Home AI is a 4B model on CPU, queued one request at a time; a prompt with web snippets can take a minute or two.
     const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 180_000 }
     const raw = library.enrichProvider

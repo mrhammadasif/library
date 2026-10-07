@@ -21,7 +21,7 @@ describe('ai enrichment with web search', () => {
   let lib: string
   const draft = { ...BOOK('Stories from the Battles of the Prophet Muhammad'), authors: ['Yasmin G. Watson'], coverUrl: null }
 
-  beforeAll(async () => { t = await createTestApp({ SEARXNG_URL: 'http://searxng.test:8080' }) })
+  beforeAll(async () => { t = await createTestApp({ SEARXNG_URL: 'http://searxng.test:8080', SEARXNG_API_KEY: 'test-searxng-key' }) })
   afterAll(() => t.close())
   afterEach(() => vi.unstubAllGlobals())
   beforeEach(async () => {
@@ -47,10 +47,19 @@ describe('ai enrichment with web search', () => {
     expect(prompt.web[0].snippet).toContain('978-1-999802-75-2')
   })
 
-  it('drops an ISBN the AI made up', async () => {
+  it('never takes an ISBN the AI made up; uses the one the results print', async () => {
     stub(aiReply('9780441172719'))
     const res = await t.http().post(`/api/libraries/${lib}/ai/enrich`).set('Cookie', owner.cookie).send({ draft }).expect(200)
-    expect(res.body.enrichment.isbn13).toBeNull()
+    expect(res.body.enrichment.isbn13).toBe('9781999802752')
+  })
+
+  it('sends the SearXNG key and caps the Ollama answer', async () => {
+    const fetchMock = stub(aiReply(''))
+    await t.http().post(`/api/libraries/${lib}/ai/enrich`).set('Cookie', owner.cookie).send({ draft }).expect(200)
+    const [, searchInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(searchInit.headers).toMatchObject({ 'X-API-Key': 'test-searxng-key' })
+    const body = JSON.parse((fetchMock.mock.calls[1] as unknown as [string, RequestInit])[1].body as string)
+    expect(body.options).toEqual({ temperature: 0, num_predict: 300, num_ctx: 4096 })
   })
 
   it('skips the web search when the book is already complete', async () => {

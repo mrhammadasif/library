@@ -24,6 +24,8 @@ export const AppConfigSchema = z.object({
   OLLAMA_URL: z.string().url().default('http://ollama:11434'),
   /** Self-hosted SearXNG (JSON format enabled) for web lookups during AI enrichment; unset = off. */
   SEARXNG_URL: z.string().url().optional(),
+  /** The home SearXNG is locked; API calls send this as `X-API-Key`. */
+  SEARXNG_API_KEY: z.string().optional(),
   OLLAMA_MODEL: z.string().default('hf.co/unsloth/Qwen3.5-4B-GGUF:UD-Q4_K_XL'),
   /** 32-byte base64 key for encrypting per-library AI keys (AES-256-GCM). */
   AI_KEYS_KEY: z.string().regex(/^[A-Za-z0-9+/]{43}=$/, 'AI_KEYS_KEY must be 32 bytes, base64'),

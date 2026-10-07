@@ -26,8 +26,9 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       COVERS_PUBLIC_URL: ${COVERS_PUBLIC_URL}
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
-      # n8n's SearXNG on n8n_default (internal only); used to web-search books during AI enrichment.
-      SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
+      # The home SearXNG (locked; its own Coolify network), reached via its public URL + API key.
+      SEARXNG_URL: ${SEARXNG_URL:-https://searxng.home.nitroxis.com}
+      SEARXNG_API_KEY: ${SEARXNG_API_KEY:-}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-hf.co/unsloth/Qwen3.5-4B-GGUF:UD-Q4_K_XL}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       AI_KEYS_KEY: ${AI_KEYS_KEY}
@@ -36,6 +37,6 @@ services:
     networks: [default, n8n_default]
 
 networks:
-  # Shared with Ollama and SearXNG, so the API reaches http://ollama:11434 and http://searxng:8080.
+  # Shared with Ollama, so the API reaches it at http://ollama:11434.
   n8n_default:
     external: true

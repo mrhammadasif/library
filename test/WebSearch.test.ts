@@ -1,7 +1,7 @@
 // TEST DATA ONLY: SearXNG-shaped responses.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { emptyDraft } from '../shared/metadata'
-import { bookQuery, isbnsInResults, needsWebSearch, searchWeb } from '../shared/webSearch'
+import { bookQuery, isbnsInResults, needsWebSearch, relevantResults, searchWeb } from '../shared/webSearch'
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status })
@@ -29,12 +29,14 @@ describe('webSearch', () => {
       ...Array.from({ length: 10 }, (_, i) => ({ title: `r${i}`, url: `https://r${i}`, content: 'x'.repeat(500) })),
     ] }))
     vi.stubGlobal('fetch', fetchMock)
-    const results = await searchWeb('http://searxng:8080/', '"Dune" book isbn')
-    expect(results).toHaveLength(6)
+    const results = await searchWeb('https://searxng.test/', '"Dune" book isbn', { apiKey: 'sx-key' })
+    expect(results).toHaveLength(11)
     expect(results[0]).toEqual({ title: 'Dune', url: 'https://a', snippet: 'ISBN 978-0-441-17271-9 Ace, 1990' })
-    expect(results[1].snippet).toHaveLength(300)
-    const url = new URL(String((fetchMock.mock.calls[0] as unknown as [string])[0]))
-    expect(url.origin + url.pathname).toBe('http://searxng:8080/search')
+    expect(results[1].snippet).toHaveLength(200)
+    const [requested, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
+    expect(init.headers).toMatchObject({ 'X-API-Key': 'sx-key' })
+    const url = new URL(String(requested))
+    expect(url.origin + url.pathname).toBe('https://searxng.test/search')
     expect(url.searchParams.get('format')).toBe('json')
     expect(url.searchParams.get('q')).toBe('"Dune" book isbn')
   })
@@ -59,5 +61,23 @@ describe('webSearch', () => {
       { title: 'Dune (ISBN 978-0-441-17271-9)', url: 'https://x/0441172717', snippet: 'Phone 0300 1234567 · 9781999802753 · 978 1 999802 75 2' },
     ])
     expect([...found].sort()).toEqual(['9780441172719', '9781999802752'])
+  })
+
+  it('keeps only the few results about this book, best match first', () => {
+    const draft = { ...emptyDraft(), title: 'Stories from the Battles of the Prophet Muhammad' }
+    const r = (title: string, snippet = '') => ({ title, url: `https://${title.length}`, snippet })
+    const results = [
+      r('Stories of the Prophets for Kids'),
+      r('Stories from the Battles of the Prophet Muhammad - Amazon.in', 'ISBN-10 1999802756'),
+      r('Battles of the Prophet', 'Stories retold, Muhammad'),
+      r('Prophet Muhammad stories', 'from the battles: 9781999802752'),
+      r('Stories from the Battles of the Prophet Muhammad, Paperback'),
+    ]
+    expect(relevantResults(draft, results).map(x => x.title)).toEqual([
+      'Stories from the Battles of the Prophet Muhammad - Amazon.in',
+      'Battles of the Prophet',
+      'Prophet Muhammad stories',
+    ])
+    expect(relevantResults({ ...emptyDraft(), title: 'The' }, results)).toEqual([])
   })
 })

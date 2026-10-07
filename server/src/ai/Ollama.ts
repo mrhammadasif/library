@@ -34,6 +34,9 @@ export class OllamaClient {
         think: false,
         stream: false,
         keep_alive: '30m',
+        // Cap the answer: a schema with arrays lets a small model keep emitting. 4096 is Ollama's default context;
+        // longer prompts are rejected rather than silently truncated.
+        options: { temperature: 0, num_predict: 300, num_ctx: 4096 },
       }),
       signal: AbortSignal.timeout(timeoutMs),
     })
