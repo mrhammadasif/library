@@ -9,7 +9,7 @@ let configured = false
  */
 export async function signInWithGoogleNative(): Promise<string | null> {
   if (!GOOGLE_WEB_CLIENT_ID) {
-    throw new Error('Google sign-in isn\'t set up in this build (EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID)')
+    throw new Error('Google sign-in isn\'t set up in this build (no web client ID)')
   }
   if (!configured) {
     GoogleOneTapSignIn.configure({ webClientId: GOOGLE_WEB_CLIENT_ID })
