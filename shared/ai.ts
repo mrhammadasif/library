@@ -4,6 +4,7 @@
 import type { IBookDraft } from './metadata.ts'
 import type { IWebResult } from './webSearch.ts'
 import { normalizeIsbn } from './isbn.ts'
+import { isbnsInResults, pagesInResults, publisherInResults, yearInResults } from './webSearch.ts'
 
 export type AiProvider = 'openai' | 'gemini' | 'openai_compatible'
 
@@ -150,11 +151,16 @@ function strings(value: unknown, limit: number, transform: (s: string) => string
 }
 
 /**
- * Validates an enrichment reply; anything malformed is dropped rather than trusted. The ISBN must also be one that was
- * actually printed in the web results (`groundedIsbns`), so a model can't make one up.
+ * Validates an enrichment reply; anything malformed is dropped rather than trusted. Facts (ISBN, publisher, year, pages)
+ * must also be printed in the web results the AI was shown, so a model can't make them up (models happily invent a
+ * year or page count; one answered "1900" for both).
  */
-export function parseEnrichment(raw: unknown, groundedIsbns: ReadonlySet<string> = new Set()): IEnrichment {
+export function parseEnrichment(raw: unknown, web: IWebResult[] = []): IEnrichment {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const groundedIsbns = isbnsInResults(web)
+  const publisher = typeof obj.publisher === 'string' && obj.publisher.trim().length <= 100 ? obj.publisher.trim() : ''
+  const year = whole(obj.year, 1450, new Date().getFullYear() + 1)
+  const pages = whole(obj.pages, 1, 10_000)
   const description = typeof obj.description === 'string' ? obj.description.trim().slice(0, 600) : ''
   const isbn = typeof obj.isbn === 'string' ? normalizeIsbn(obj.isbn) : null
   const language = typeof obj.language === 'string' && /^[a-z]{2}$/i.test(obj.language.trim())
@@ -167,11 +173,9 @@ export function parseEnrichment(raw: unknown, groundedIsbns: ReadonlySet<string>
     language,
     // A grounded pick from the AI wins; if it named none but the results print exactly one ISBN, that one is unambiguous.
     isbn13: isbn && groundedIsbns.has(isbn.isbn13) ? isbn.isbn13 : groundedIsbns.size === 1 ? [...groundedIsbns][0] : null,
-    publisher: typeof obj.publisher === 'string' && obj.publisher.trim().length <= 100 && !/^(null|none|unknown|n\/?a|-)?$/i.test(obj.publisher.trim())
-      ? obj.publisher.trim()
-      : null,
-    publishedYear: whole(obj.year, 1450, new Date().getFullYear() + 1),
-    pages: whole(obj.pages, 1, 10_000),
+    publisher: publisher && publisherInResults(publisher, web) ? publisher : null,
+    publishedYear: year && yearInResults(year, web) ? year : null,
+    pages: pages && pagesInResults(pages, web) ? pages : null,
   }
 }
 

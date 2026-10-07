@@ -8,7 +8,7 @@ import { Inject, Injectable } from '@nestjs/common'
 import { buildEnrichUser, chatJson, ENRICH_SCHEMA, ENRICH_SYSTEM, IDENTIFY_SCHEMA, IDENTIFY_SYSTEM, parseEnrichment, parseIdentification } from '../../../shared/ai'
 import { normalizeIsbn } from '../../../shared/isbn'
 import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidates } from '../../../shared/metadata'
-import { bookQuery, isbnsInResults, needsWebSearch, relevantResults, searchWeb } from '../../../shared/webSearch'
+import { bookQuery, needsWebSearch, relevantResults, searchWeb } from '../../../shared/webSearch'
 import { requirePermission } from '../auth/Permissions'
 import { GoogleBooksBudget } from '../books-budget/GoogleBooksBudget'
 import { APP_CONFIG } from '../config/AppConfig'
@@ -104,7 +104,7 @@ export class AiService {
     const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 60_000 }
     const config = library.enrichProvider ? await this.providerConfig(m.libraryId, library.enrichProvider) : home!
     const raw = await chatJson(config, request)
-    return { enrichment: parseEnrichment(raw, isbnsInResults(web)), provider: library.enrichProvider ?? 'home' }
+    return { enrichment: parseEnrichment(raw, web), provider: library.enrichProvider ?? 'home' }
   }
 
   /** The server's Home AI gateway (OmniRoute by default), or null when no key is configured. */

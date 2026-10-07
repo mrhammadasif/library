@@ -114,3 +114,29 @@ export function isbnsInResults(results: IWebResult[]): Set<string> {
   }
   return found
 }
+
+// ─── Grounding: facts from the AI count only if the search results print them ─
+
+function resultsText(results: IWebResult[]): string {
+  return results.map(r => `${r.title} ${r.snippet}`).join(' \n ')
+}
+
+/** "2021" printed as a number of its own. */
+export function yearInResults(year: number, results: IWebResult[]): boolean {
+  return new RegExp(`(^|\\D)${year}(\\D|$)`).test(resultsText(results))
+}
+
+/** "64 pages", "64 p.", "pp. 64", "Pages: 64", "Print length: 64". */
+export function pagesInResults(pages: number, results: IWebResult[]): boolean {
+  const n = String(pages)
+  return new RegExp(`(^|\\D)${n}\\s*(pages?|pp?\\.?)(\\W|$)|(pages?|pp\\.?|length)\\s*[:\\-]?\\s*${n}(\\D|$)`, 'i').test(resultsText(results))
+}
+
+const PUBLISHER_NOISE = /\b(books?|publish(ing|ers?)|press|house|inc|ltd|llc|limited|co|company|pvt|group|media)\b/gi
+
+/** The publisher's distinctive name ("Goodword" of "Goodword Books") appears in the results, ignoring spacing/punctuation. */
+export function publisherInResults(publisher: string, results: IWebResult[]): boolean {
+  const squash = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]/gu, '')
+  const name = squash(publisher.replace(PUBLISHER_NOISE, ' '))
+  return name.length >= 3 && squash(resultsText(results)).includes(name)
+}

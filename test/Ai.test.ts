@@ -51,20 +51,22 @@ describe('ai', () => {
     expect(baseUrlFor({ provider: 'openai_compatible', model: 'm', baseUrl: 'https://gw/v1', apiKey: 'k' })).toBe('https://gw/v1')
   })
 
-  it('accepts web facts only when they check out', () => {
+  it('accepts web facts only when the search results print them', () => {
     const reply = { categories: ['Islamic'], tags: ['children'], description: 'Stories.', language: 'en', isbn: '978-1-999802-75-2', publisher: ' Watson ', year: '2021', pages: 64 }
-    // ISBN printed in a search result → kept; same reply without that grounding → dropped.
-    expect(parseEnrichment(reply, new Set(['9781999802752']))).toMatchObject({ isbn13: '9781999802752', publisher: 'Watson', publishedYear: 2021, pages: 64 })
-    expect(parseEnrichment(reply).isbn13).toBeNull()
-    expect(parseEnrichment({ ...reply, isbn: '9781999802753' }, new Set(['9781999802753', '9780441172719'])).isbn13).toBeNull()
-    // The AI named nothing usable, but the results print exactly one ISBN: that one is unambiguous.
-    expect(parseEnrichment({ ...reply, isbn: null }, new Set(['9781999802752'])).isbn13).toBe('9781999802752')
-    expect(parseEnrichment({ ...reply, isbn: null }, new Set(['9781999802752', '9780441172719'])).isbn13).toBeNull()
-    expect(parseEnrichment({ ...reply, year: 3000, pages: 0 })).toMatchObject({ publishedYear: null, pages: null })
-    // Models sometimes write "null" as text.
-    expect(parseEnrichment({ ...reply, publisher: 'null' }).publisher).toBeNull()
-    expect(parseEnrichment({ ...reply, publisher: 'Unknown' }).publisher).toBeNull()
-    expect(parseEnrichment({ ...reply, year: 2001.5, pages: '12 pages' })).toMatchObject({ publishedYear: null, pages: null })
+    const web = [{ title: 'Stories from the Battles of the Prophet Muhammad', url: 'https://x', snippet: 'Watson Publishing, 2021 · 64 pages · ISBN 978-1-999802-75-2' }]
+    expect(parseEnrichment(reply, web)).toMatchObject({ isbn13: '9781999802752', publisher: 'Watson', publishedYear: 2021, pages: 64 })
+    // Nothing printed → nothing kept, however plausible.
+    expect(parseEnrichment(reply)).toMatchObject({ isbn13: null, publisher: null, publishedYear: null, pages: null })
+    // Invented values: an ISBN, year and page count the results don't print.
+    expect(parseEnrichment({ ...reply, isbn: '9780441172719', year: 1900, pages: 1900 }, web)).toMatchObject({ isbn13: '9781999802752', publishedYear: null, pages: null })
+    // The AI named no ISBN, but the results print exactly one: that one is unambiguous. Two → no guess.
+    expect(parseEnrichment({ ...reply, isbn: null }, web).isbn13).toBe('9781999802752')
+    const two = [...web, { title: 'Dune', url: 'https://y', snippet: 'ISBN 9780441172719' }]
+    expect(parseEnrichment({ ...reply, isbn: null }, two).isbn13).toBeNull()
+    // Out of range, not whole numbers, "null" as text.
+    expect(parseEnrichment({ ...reply, year: 3000, pages: 0 }, web)).toMatchObject({ publishedYear: null, pages: null })
+    expect(parseEnrichment({ ...reply, year: 2001.5, pages: '12 pages' }, web)).toMatchObject({ publishedYear: null, pages: null })
+    expect(parseEnrichment({ ...reply, publisher: 'null' }, web).publisher).toBeNull()
   })
 
   it('adds web results to the enrichment prompt only when there are some', () => {

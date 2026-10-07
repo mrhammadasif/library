@@ -1,7 +1,7 @@
 // TEST DATA ONLY: SearXNG-shaped responses.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { emptyDraft } from '../shared/metadata'
-import { bookQuery, isbnsInResults, needsWebSearch, relevantResults, searchWeb } from '../shared/webSearch'
+import { bookQuery, isbnsInResults, needsWebSearch, pagesInResults, publisherInResults, relevantResults, searchWeb, yearInResults } from '../shared/webSearch'
 
 function respond(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status })
@@ -79,5 +79,19 @@ describe('webSearch', () => {
       'Prophet Muhammad stories',
     ])
     expect(relevantResults({ ...emptyDraft(), title: 'The' }, results)).toEqual([])
+  })
+
+  it('grounds year, pages and publisher in what the results print', () => {
+    const web = [{ title: 'The Story of Khadijah', url: 'https://x', snippet: 'Goodwordsbooks · 2013 · Paperback, 64 pages. Print length: 48' }]
+    expect(yearInResults(2013, web)).toBe(true)
+    expect(yearInResults(1900, web)).toBe(false)
+    expect(yearInResults(201, web)).toBe(false)
+    expect(pagesInResults(64, web)).toBe(true)
+    expect(pagesInResults(48, web)).toBe(true)
+    expect(pagesInResults(2013, web)).toBe(false)
+    expect(pagesInResults(24, web)).toBe(false)
+    expect(publisherInResults('Goodword Books', web)).toBe(true)
+    expect(publisherInResults('Darussalam', web)).toBe(false)
+    expect(publisherInResults('Books Inc', web)).toBe(false)
   })
 })
