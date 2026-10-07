@@ -62,4 +62,12 @@ describe('free ai tier', () => {
     }
     expect((fetchMock.mock.calls as unknown as [string][]).every(([url]) => url.startsWith('https://generativelanguage.googleapis.com'))).toBe(true)
   })
+
+  it('never reads cover photos with the free tier: that needs the library\'s own key', async () => {
+    const fetchMock = stub()
+    const lib = await createLibrary(t, owner)
+    const res = await t.http().post(`/api/libraries/${lib}/ai/identify-cover`).set('Cookie', owner.cookie).send({ imageBase64: 'x'.repeat(200) }).expect(409)
+    expect(res.body.code).toBe('ai_not_configured')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })
