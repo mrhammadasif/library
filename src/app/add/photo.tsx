@@ -18,7 +18,7 @@ import { errorMessage } from '~/utils/Errors'
 
 /** Photograph a cover; the library's vision AI reads it, then pick the matching edition (add) or search for it. */
 export default function PhotoScreen() {
-  const { mode = 'add' } = useLocalSearchParams<{ mode?: 'add' | 'search' }>()
+  const { mode = 'add', shelfId } = useLocalSearchParams<{ mode?: 'add' | 'search', shelfId?: string }>()
   const { library } = useCurrentLibrary()
   const canManageAi = useCan('ai.manage')
   const [photoUri, setPhotoUri] = useState<string | null>(null)
@@ -75,7 +75,7 @@ export default function PhotoScreen() {
 
   function choose(draft: IBookDraft) {
     setPendingDraft(draft, photoUri)
-    router.replace({ pathname: '/add/review', params: { pending: '1' } })
+    router.replace({ pathname: '/add/review', params: { pending: '1', ...(shelfId ? { shelfId } : {}) } })
   }
 
   function chooseIdentification(id: IIdentification) {

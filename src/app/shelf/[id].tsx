@@ -25,6 +25,7 @@ export default function ShelfScreen() {
   const canMove = useCan('books.move')
   const canArchive = useCan('books.archive')
   const canAudit = useCan('audits.run')
+  const canAdd = useCan('books.add')
   const [selected, setSelected] = useState<Set<string> | null>(null)
   const [rename, setRename] = useState<string | null>(null)
 
@@ -82,6 +83,15 @@ export default function ShelfScreen() {
       {books.data && list.length === 0 && <Empty text="📭 Nothing on this shelf yet." />}
       {selected && <Text className="text-base text-muted">Tap the books you want to move or give away.</Text>}
       {list.length > 0 && <BookGrid books={list} selected={selected} onToggle={toggle} />}
+
+      {canAdd && shelf && !selected && (
+        <Button
+          big
+          icon="plus"
+          label="Add a book here"
+          onPress={() => router.push({ pathname: '/add/scan', params: { shelfId: id } })}
+        />
+      )}
 
       {canAudit && list.length > 0 && !selected && (
         <Button variant="secondary" icon="check-square" label="Check this shelf" onPress={() => router.push({ pathname: '/audit', params: { shelf: id } })} />

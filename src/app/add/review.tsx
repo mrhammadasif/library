@@ -38,7 +38,7 @@ type AiState = 'off' | 'working' | 'done' | 'failed'
  * background without overwriting anything the user has edited.
  */
 export default function ReviewScreen() {
-  const params = useLocalSearchParams<{ isbn?: string, pending?: string, from?: string }>()
+  const params = useLocalSearchParams<{ isbn?: string, pending?: string, from?: string, shelfId?: string }>()
   const { library } = useCurrentLibrary()
   const racks = useRacks(library.id)
   const tags = useTags(library.id)
@@ -50,7 +50,8 @@ export default function ReviewScreen() {
   // A ref, not state: async AI/colour callbacks must see edits made while they were running.
   const touched = useRef(new Set<keyof IBookFields>())
   const [localCover, setLocalCover] = useState<string | null>(null)
-  const [shelfId, setShelfId] = useState<string | null>(null)
+  // Opened from a shelf's "Add a book here": that shelf is chosen. Otherwise the last-used shelf (effect below).
+  const [shelfId, setShelfId] = useState<string | null>(params.shelfId ?? null)
   const [lookup, setLookup] = useState<{ loading: boolean, result: ILookupResult | null, error: string | null }>({ loading: !!params.isbn, result: null, error: null })
   const [ai, setAi] = useState<AiState>('off')
   const [titleError, setTitleError] = useState<string | null>(null)
@@ -130,8 +131,32 @@ export default function ReviewScreen() {
       .then(({ enrichment }) => {
         setFields(current => applyEnrichment(current, enrichment, touched.current))
         setAi('done')
+        // The AI found the ISBN on the web: the book databases may know the rest (and whether it's already here).
+        if (enrichment.isbn13 && !base.isbn13) {
+          fillFromIsbn(enrichment.isbn13)
+        }
       })
       .catch(() => setAi('failed'))
+  }
+
+  function fillFromIsbn(isbn13: string) {
+    lookupIsbn(library.id, isbn13)
+      .then((result) => {
+        setLookup({ loading: false, result: { ...result, candidates: [] }, error: null })
+        if (result.draft) {
+          const found = draftToFields(result.draft)
+          setFields((current) => {
+            const next = { ...current }
+            for (const key of ['publisher', 'publishedYear', 'pages', 'subtitle', 'description', 'language'] as const) {
+              if (!touched.current.has(key) && !current[key] && found[key]) {
+                Object.assign(next, { [key]: found[key] })
+              }
+            }
+            return next
+          })
+        }
+      })
+      .catch(() => {})
   }
 
   function detectColor(uri: string) {

@@ -101,8 +101,9 @@ export class AiService {
     const web = this.config.SEARXNG_URL && needsWebSearch(draft)
       ? relevantResults(draft, await searchWeb(this.config.SEARXNG_URL, bookQuery(draft), { apiKey: this.config.SEARXNG_API_KEY }))
       : []
-    // Home AI is a small model on a CPU-only box, queued one request at a time behind other apps' calls.
-    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 120_000 }
+    // Home AI is a small model on a CPU-only box, queued one request at a time behind other apps' calls: a live call with
+    // web results took ~93 s, so allow headroom.
+    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 180_000 }
     const raw = library.enrichProvider
       ? await chatJson(await this.providerConfig(m.libraryId, library.enrichProvider), request)
       : await this.ollama.chatJson(request)

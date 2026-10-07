@@ -20,6 +20,9 @@ export function Screen({ children, refreshing = false, onRefresh, header, tabs =
         contentContainerClassName={`gap-5 px-5 pt-2 ${tabs ? 'pb-36' : 'pb-16'}`}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        // Android form sheets (invite, lend, move, give away) are Material bottom sheets: without nested scrolling the
+        // sheet grabs every drag and the content can't scroll. Harmless on full screens.
+        nestedScrollEnabled
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
       >
         {children}

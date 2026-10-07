@@ -12,7 +12,12 @@ appId: com.nitroxis.library
 - inputText: ${TEST_PASSWORD}
 - hideKeyboard
 - tapOn: "Sign in"
-# Android's password manager offers to save the password after sign-in; dismiss it when it appears.
+# Android's password manager offers to save the password a moment after sign-in (button "Not now" or "Never");
+# wait briefly for it so it can't pop up over a later step.
+- extendedWaitUntil:
+    visible: "Save password.*"
+    timeout: 8000
+    optional: true
 - tapOn:
-    text: "Not now"
+    text: "Not now|Never"
     optional: true

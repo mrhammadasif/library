@@ -1,6 +1,6 @@
 import type { IBook } from '~/models/IBook'
 import { Feather } from '@expo/vector-icons'
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { DateTime } from 'luxon'
 import { useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
@@ -29,6 +29,8 @@ type ScanState =
  * Found it; a new book goes straight to the add form (for people allowed to add books).
  */
 export default function ScanScreen() {
+  // Set when opened from a shelf ("Add a book here"): new books go on that shelf.
+  const { shelfId } = useLocalSearchParams<{ shelfId?: string }>()
   const { library } = useCurrentLibrary()
   const { user } = useAuth()
   const toast = useToast()
@@ -53,7 +55,7 @@ export default function ScanScreen() {
       }
       else if (can.add) {
         setState({ kind: 'idle' })
-        router.push({ pathname: '/add/review', params: { isbn, from: 'scan' } })
+        router.push({ pathname: '/add/review', params: { isbn, from: 'scan', ...(shelfId ? { shelfId } : {}) } })
       }
       else {
         setState({ kind: 'unknown', isbn })
@@ -124,7 +126,7 @@ export default function ScanScreen() {
           </View>
         </View>
         {can.add && (
-          <Button small variant="ghost" icon="plus" label="Add another copy" onPress={() => router.push({ pathname: '/add/review', params: { isbn, from: 'scan' } })} />
+          <Button small variant="ghost" icon="plus" label="Add another copy" onPress={() => router.push({ pathname: '/add/review', params: { isbn, from: 'scan', ...(shelfId ? { shelfId } : {}) } })} />
         )}
       </View>
     )
@@ -167,14 +169,20 @@ export default function ScanScreen() {
         {state.kind === 'idle' && (
           <>
             {error && <Text className="text-center text-base text-negative">{error}</Text>}
+            {shelfId && can.add && labels.get(shelfId) && (
+              <Text className="text-center text-base text-muted">
+                {'New books go on '}
+                <Text className="font-bold text-ink">{labels.get(shelfId)}</Text>
+              </Text>
+            )}
             {can.add
               ? (
                   <View className="flex-row gap-3">
                     <View className="flex-1">
-                      <Button variant="secondary" icon="camera" label="No barcode?" onPress={() => router.push('/add/photo')} />
+                      <Button variant="secondary" icon="camera" label="No barcode?" onPress={() => router.push({ pathname: '/add/photo', params: shelfId ? { shelfId } : {} })} />
                     </View>
                     <View className="flex-1">
-                      <Button variant="secondary" icon="edit-3" label="Type it in" onPress={() => router.push({ pathname: '/add/review', params: { from: 'scan' } })} />
+                      <Button variant="secondary" icon="edit-3" label="Type it in" onPress={() => router.push({ pathname: '/add/review', params: { from: 'scan', ...(shelfId ? { shelfId } : {}) } })} />
                     </View>
                   </View>
                 )

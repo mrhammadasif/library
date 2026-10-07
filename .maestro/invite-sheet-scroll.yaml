@@ -1,0 +1,63 @@
+# Regression: content inside Android form sheets must scroll (the invite sheet's list of permissions is taller than the
+# sheet). Before the fix, dragging moved the sheet instead of the content.
+# TEST DATA ONLY: creates "Maestro Sheet Library" and deletes it at the end.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Welcome|Hi .*"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Welcome"
+    file: flows/delete-library.yaml
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro Sheet Library"
+- hideKeyboard
+- tapOn: "Create library"
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+
+# ── Open the invite sheet ────────────────────────────────────────────────────
+- tapOn: "Settings"
+- tapOn: "Members"
+- tapOn: "Invite someone"
+- extendedWaitUntil:
+    visible: "Add books"
+    timeout: 10000
+- takeScreenshot: sheet-01-top
+
+# ── Swipe up inside the content: it must scroll to the bottom of the form ────
+- swipe:
+    start: 50%, 80%
+    end: 50%, 25%
+    duration: 600
+- swipe:
+    start: 50%, 80%
+    end: 50%, 25%
+    duration: 600
+- assertVisible: "Create invite code"
+- assertNotVisible: "What can they do\\?"
+- takeScreenshot: sheet-02-scrolled
+
+# ── A short drag down scrolls the content back up; it must not pull the sheet down ──
+- swipe:
+    start: 50%, 40%
+    end: 50%, 65%
+    duration: 600
+- assertNotVisible: "Create invite code"
+# (The Members screen behind the sheet stays in the accessibility tree, so check the sheet's own top instead.)
+- assertVisible: "What can they do\\?"
+- takeScreenshot: sheet-03-scrolled-back
+
+# ── Clean up ─────────────────────────────────────────────────────────────────
+- back
+- back
+- back
+- runFlow: flows/delete-library.yaml
