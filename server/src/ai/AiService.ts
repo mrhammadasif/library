@@ -99,7 +99,8 @@ export class AiService {
       throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
     }
     const web = this.config.SEARXNG_URL && needsWebSearch(draft) ? await searchWeb(this.config.SEARXNG_URL, bookQuery(draft)) : []
-    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 90_000 }
+    // Home AI is a 4B model on CPU, queued one request at a time; a prompt with web snippets can take a minute or two.
+    const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 180_000 }
     const raw = library.enrichProvider
       ? await chatJson(await this.providerConfig(m.libraryId, library.enrichProvider), request)
       : await this.ollama.chatJson(request)

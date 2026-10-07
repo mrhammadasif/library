@@ -28,7 +28,7 @@ services:
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
       # n8n's SearXNG on n8n_default (internal only); used to web-search books during AI enrichment.
       SEARXNG_URL: ${SEARXNG_URL:-http://searxng:8080}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-hf.co/unsloth/Qwen3.5-0.8B-GGUF:UD-Q4_K_XL}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-hf.co/unsloth/Qwen3.5-4B-GGUF:UD-Q4_K_XL}
       RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
       AI_KEYS_KEY: ${AI_KEYS_KEY}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
