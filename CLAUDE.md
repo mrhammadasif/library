@@ -149,6 +149,11 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 ## Gotchas (inherited from financy)
 - NativeWind v5 rc: `className` only on core RN components (use `SafeArea`), `/NN` opacity modifiers don't render (use hex alpha),
   and `leading-*` line heights blow up to huge gaps on device: set `style={{ lineHeight: n }}` instead.
+- Keyboard: Android is edge-to-edge, so the window doesn't resize for the keyboard. `KeyboardProvider` (root) +
+  `KeyboardAwareScrollView` from `react-native-keyboard-controller` (in `Screen`, sign-in, sign-up) scroll the
+  focused input above it. Not a core component, so use `contentContainerStyle`, not NativeWind classes. Chained forms
+  use `returnKeyType="next"` + a ref (`Field` takes `ref`) so "Next" moves on. Maestro: force the soft keyboard on
+  emulators (`adb shell settings put secure show_ime_with_hard_keyboard 1`) to see real keyboard behaviour.
 - `lightningcss` pinned to 1.30.1 via `overrides`. `app.config.js` stays plain JS (older eas-cli + TS 6).
 - `deno.json` lives in `supabase/`, not `supabase/functions/`.
 - Cover uploads use a fresh path per upload (`{library}/{book}-{ts}.jpg`) so cached images refresh.

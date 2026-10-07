@@ -1,0 +1,65 @@
+# Inputs low on a screen stay visible above the keyboard (edge-to-edge Android; react-native-keyboard-controller).
+# TEST DATA ONLY: creates "Maestro Keyboard Library" and deletes it at the end.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Welcome|Hi .*"
+    timeout: 20000
+# Leftover from an aborted run: only ever a "Maestro …" test library, never anything else on the account.
+- runFlow:
+    when:
+      visible: "Maestro .*Library.*"
+    file: flows/delete-library.yaml
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro Keyboard Library"
+- hideKeyboard
+- tapOn: "Create library"
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+
+# ── Add a book: the description sits at the bottom of "More details" ─────────
+- tapOn: "Scan a book"
+- tapOn: "Type it in"
+- tapOn:
+    id: "book-title"
+- inputText: "Maestro Keyboard Book"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "More details"
+    direction: DOWN
+- tapOn: "More details"
+- scrollUntilVisible:
+    element:
+      id: "book-description-input"
+    direction: DOWN
+- tapOn:
+    id: "book-description-input"
+- inputText: "Typed with the keyboard open"
+- assertVisible: "Typed with the keyboard open"
+- takeScreenshot: keyboard-01-description
+- hideKeyboard
+- back
+- back
+
+# ── Delete page: the confirm field is low on the screen ──────────────────────
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Delete this library"
+    direction: DOWN
+- tapOn: "Delete this library"
+- tapOn:
+    id: "delete-library-confirm"
+- inputText: "Maestro"
+- assertVisible: "Maestro"
+- takeScreenshot: keyboard-02-delete-confirm
+- hideKeyboard
+- back
+- back
+- runFlow: flows/delete-library.yaml

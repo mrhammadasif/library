@@ -1,3 +1,4 @@
+import type { Ref } from 'react'
 import type { TextInputProps } from 'react-native'
 import { Text, TextInput, View } from 'react-native'
 import { Colors } from '~/constants/Colors'
@@ -8,6 +9,8 @@ interface IFieldProps extends Omit<TextInputProps, 'value' | 'onChangeText'> {
   onChangeText: (text: string) => void
   hint?: string
   error?: string | null
+  /** e.g. to move focus here from the previous field's "Next" key (React 19: ref is a plain prop). */
+  ref?: Ref<TextInput>
 }
 
 /** Labelled text input. */

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { KeyboardAvoidingView, ScrollView, Text } from 'react-native'
+import { Text } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { useAuth } from '~/auth/AuthProvider'
 import { Button } from '~/components/Button'
 import { Field } from '~/components/Field'
@@ -38,8 +39,11 @@ export default function SignUpScreen() {
   return (
     <SafeArea className="flex-1 bg-canvas">
       <Header title="Create account" />
-      <KeyboardAvoidingView behavior="padding" className="flex-1">
-        <ScrollView contentContainerClassName="gap-4 px-7 pb-10 pt-4" keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={{ gap: 16, paddingHorizontal: 28, paddingBottom: 40, paddingTop: 16 }}
+        keyboardShouldPersistTaps="handled"
+      >
           <GoogleButton />
           <Text className="py-2 text-center text-base text-muted">or use your email</Text>
           <Field label="Your name" value={name} onChangeText={setName} autoComplete="name" hint="Shown to people you share a library with" />
@@ -47,8 +51,7 @@ export default function SignUpScreen() {
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" />
           {error && <Text className="text-center text-base text-negative">{error}</Text>}
           <Button big label="Create account" onPress={onSubmit} loading={busy} disabled={!name.trim() || !email || !password} />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </SafeArea>
   )
 }

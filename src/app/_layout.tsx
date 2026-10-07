@@ -4,6 +4,7 @@ import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 import { StatusBar } from 'expo-status-bar'
 import { useEffect } from 'react'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { AuthProvider, useAuth } from '~/auth/AuthProvider'
 import { ToastProvider } from '~/components/Toast'
 import { Colors } from '~/constants/Colors'
@@ -81,15 +82,18 @@ function RootStack() {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <LibraryProvider>
-          <ToastProvider>
-            <StatusBar style="dark" />
-            <RootStack />
-          </ToastProvider>
-        </LibraryProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    // Edge-to-edge Android doesn't resize the window for the keyboard; this lets scroll views keep inputs visible.
+    <KeyboardProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <LibraryProvider>
+            <ToastProvider>
+              <StatusBar style="dark" />
+              <RootStack />
+            </ToastProvider>
+          </LibraryProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </KeyboardProvider>
   )
 }

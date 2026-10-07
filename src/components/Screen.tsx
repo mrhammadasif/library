@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { RefreshControl, ScrollView } from 'react-native'
+import { RefreshControl } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import { SafeArea } from '~/components/SafeArea'
 
 interface IScreenProps {
@@ -16,8 +17,11 @@ export function Screen({ children, refreshing = false, onRefresh, header, tabs =
   return (
     <SafeArea edges={['top']} className="flex-1 bg-canvas">
       {header}
-      <ScrollView
-        contentContainerClassName={`gap-5 px-5 pt-2 ${tabs ? 'pb-36' : 'pb-16'}`}
+      {/* Scrolls the focused input above the keyboard (Android edge-to-edge doesn't resize the window).
+          Not a core component, so NativeWind's contentContainerClassName doesn't apply: gap-5 px-5 pt-2 pb-36/pb-16. */}
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={{ gap: 20, paddingHorizontal: 20, paddingTop: 8, paddingBottom: tabs ? 144 : 64 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         // Android form sheets (invite, lend, move, give away) are Material bottom sheets: without nested scrolling the
@@ -26,7 +30,7 @@ export function Screen({ children, refreshing = false, onRefresh, header, tabs =
         refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
       >
         {children}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeArea>
   )
 }
