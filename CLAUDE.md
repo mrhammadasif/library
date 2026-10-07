@@ -79,6 +79,11 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   name typed back. The server checks it too (`DELETE /libraries/:id` body `{ confirmName }` → 400 `name_mismatch`).
 - Devices: the app sends `User-Agent: HomeLibrary/<version> (<maker model>; Android <n>)` (`USER_AGENT` in
   `src/api/Env.ts`) so sessions are recognisable; the current session is matched by id; "Sign out all other devices".
+- **Free for everyone (no AI needed):** Open Library and the home SearXNG. In a title lookup ("Find it online"), when no
+  database candidate with an ISBN matches the title (`titleScore` ≥ 0.75), `LookupService.webCandidates` searches the
+  web and turns ISBNs printed in matching results into candidates (≤3, filled from Open Library/Google when known).
+  Every lookup costs one unit of `LIBRARY_DAILY_LOOKUPS` (300/library/day, 429 `lookup_limit`). Web searches use
+  `LIBRARY_DAILY_WEB_SEARCHES`. Trusted libraries are exempt.
 - Web search during AI enrichment: when the draft still has gaps (`needsWebSearch`), `AiService.enrich` queries the
   home **SearXNG** (`SEARXNG_URL` = `https://searxng.home.nitroxis.com`, locked: `SEARXNG_API_KEY` sent as `X-API-Key`;
   it has no internal route to the API) and keeps only the ≤3 results whose text matches the title (`relevantResults`),

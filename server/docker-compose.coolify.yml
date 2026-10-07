@@ -42,3 +42,4 @@ services:
       # Per-library daily allowances (trusted libraries exempt); when spent, lookups/enrichment degrade gracefully.
       LIBRARY_DAILY_GOOGLE_BOOKS: ${LIBRARY_DAILY_GOOGLE_BOOKS:-150}
       LIBRARY_DAILY_WEB_SEARCHES: ${LIBRARY_DAILY_WEB_SEARCHES:-50}
+      LIBRARY_DAILY_LOOKUPS: ${LIBRARY_DAILY_LOOKUPS:-300}

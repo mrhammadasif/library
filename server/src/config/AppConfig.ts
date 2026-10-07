@@ -45,6 +45,8 @@ export const AppConfigSchema = z.object({
   /** Per-library daily allowances (Pacific day); trusted libraries are exempt. Spent = graceful fallback. */
   LIBRARY_DAILY_GOOGLE_BOOKS: z.coerce.number().int().min(0).default(150),
   LIBRARY_DAILY_WEB_SEARCHES: z.coerce.number().int().min(0).default(50),
+  /** Online lookups (scan, ISBN or title search) per library per day: Open Library + SearXNG stay free for everyone. */
+  LIBRARY_DAILY_LOOKUPS: z.coerce.number().int().min(0).default(300),
   RATE_LIMIT_ENABLED: z.stringbool().default(true),
 })
 

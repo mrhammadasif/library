@@ -80,20 +80,23 @@ function words(text: string): string[] {
   return text.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(w => w.length >= 3 && !STOPWORDS.has(w))
 }
 
+/** Share of the title's meaningful words that appear in `text` (0–1); 0 for a title with none. */
+export function titleScore(title: string, text: string): number {
+  const titleWords = [...new Set(words(title))]
+  if (!titleWords.length) {
+    return 0
+  }
+  const found = new Set(words(text))
+  return titleWords.filter(w => found.has(w)).length / titleWords.length
+}
+
 /**
  * The few results that are clearly about this book: most of its title words appear in the result, best match first.
  * Keeps the AI prompt short and stops ISBNs of other books from counting as evidence.
  */
 export function relevantResults(draft: IBookDraft, results: IWebResult[]): IWebResult[] {
-  const titleWords = [...new Set(words(draft.title))]
-  if (!titleWords.length) {
-    return []
-  }
   return results
-    .map((r) => {
-      const text = new Set(words(`${r.title} ${r.snippet}`))
-      return { r, score: titleWords.filter(w => text.has(w)).length / titleWords.length }
-    })
+    .map(r => ({ r, score: titleScore(draft.title, `${r.title} ${r.snippet}`) }))
     .filter(x => x.score >= 0.75)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_RESULTS)

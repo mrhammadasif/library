@@ -5,7 +5,7 @@ import { APP_CONFIG } from '../config/AppConfig'
 import { InjectPrisma } from '../prisma/Prisma'
 import { pacificDay } from './PacificDay'
 
-export type AllowanceKind = 'google_books' | 'web_search' | 'ai' | 'free_ai'
+export type AllowanceKind = 'google_books' | 'web_search' | 'lookup' | 'ai' | 'free_ai'
 
 /** What a caller knows about the library: libraries the admin marked trusted have no daily allowance. */
 export interface IAllowanceScope {
@@ -30,7 +30,12 @@ export class LibraryAllowance {
     if (scope.trusted) {
       return true
     }
-    const limit = kind === 'google_books' ? this.config.LIBRARY_DAILY_GOOGLE_BOOKS : this.config.LIBRARY_DAILY_WEB_SEARCHES
+    const limits: Partial<Record<AllowanceKind, number>> = {
+      google_books: this.config.LIBRARY_DAILY_GOOGLE_BOOKS,
+      web_search: this.config.LIBRARY_DAILY_WEB_SEARCHES,
+      lookup: this.config.LIBRARY_DAILY_LOOKUPS,
+    }
+    const limit = limits[kind] ?? 0
     return this.takeUpTo(scope.id, kind, limit, now)
   }
 
