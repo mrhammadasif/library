@@ -26,7 +26,7 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - **Bookcases (racks) → shelves**. A **book row = one physical copy**; `shelf_id` is its home shelf: kept while lent out or
   missing, cleared when given away (DB check constraint).
 - Status machine: `on_shelf` ⇄ `borrowed` (lend/return), `on_shelf` → `missing` (finishing a book check) → `on_shelf`
-  (seen again / "I found it"), any → `archived` (given away/lost/discarded) → `on_shelf` (bring back). Every change writes `book_events`.
+  (seen again / "I found it") or → `borrowed` ("Someone has it": lending a missing book records who has it), any → `archived` (given away/lost/discarded) → `on_shelf` (bring back). Every change writes `book_events`.
 - Book checks: `random` (N books weighted to longest-unseen; the app plays it as a one-book-at-a-time game) or `shelf`
   (scan every barcode; books from other shelves recorded as `unexpected`). Finishing marks unchecked items missing.
 
@@ -75,6 +75,8 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   Pacific day, atomic like the Google budget): `LIBRARY_DAILY_GOOGLE_BOOKS` (150) and `LIBRARY_DAILY_WEB_SEARCHES` (50).
   Libraries the admin marks **trusted** (`libraries.trusted`, `PUT /libraries/:id/trusted`, admin-only switch in
   Settings) are exempt. When an allowance is spent, lookups use Open Library only and AI runs without web results.
+- Missing books: a red banner on Home ("❓ N books are missing") opens `missing.tsx`, where each book can be marked
+  found, borrowed by someone (lend sheet) or gone for good (give-away sheet).
 - Deleting a library: a dedicated page (`delete-library.tsx`) lists what's lost (with counts) and needs the exact
   name typed back. The server checks it too (`DELETE /libraries/:id` body `{ confirmName }` → 400 `name_mismatch`).
 - Devices: the app sends `User-Agent: HomeLibrary/<version> (<maker model>; Android <n>)` (`USER_AGENT` in

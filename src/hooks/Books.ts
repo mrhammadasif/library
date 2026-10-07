@@ -49,6 +49,14 @@ export function useRecentBooks(libraryId: string, limit = 10) {
   })
 }
 
+/** Books a book check couldn't find: still theirs, waiting to be found, reported borrowed or written off. */
+export function useMissingBooks(libraryId: string) {
+  return useQuery({
+    queryKey: ['books', libraryId, 'missing'],
+    queryFn: () => api.get<IBook[]>(`/libraries/${libraryId}/books`, { query: { status: 'missing' } }),
+  })
+}
+
 export function useArchivedBooks(libraryId: string) {
   return useQuery({
     queryKey: ['books', libraryId, 'archived'],

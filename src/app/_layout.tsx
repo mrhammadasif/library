@@ -59,6 +59,7 @@ function RootStack() {
         <Stack.Screen name="invite" options={SHEET} />
         <Stack.Screen name="ai-settings" />
         <Stack.Screen name="delete-library" />
+        <Stack.Screen name="missing" />
       </Stack.Protected>
       <Stack.Protected guard={verified}>
         <Stack.Screen name="welcome" />

@@ -51,6 +51,7 @@ export default function HomeScreen() {
   const coverWidth = 104
 
   const overdue = (loans.data ?? []).filter(l => isOverdue(l.dueAt))
+  const missing = stats.data?.byStatus.missing ?? 0
   const firstName = me.data?.name.split(' ')[0]
   const hasRack = (racks.data?.length ?? 0) > 0
   const hasShelf = racks.data?.some(r => r.shelves.length > 0) ?? false
@@ -85,6 +86,21 @@ export default function HomeScreen() {
       </View>
 
       {stats.error && <ErrorState error={stats.error} onRetry={refresh} />}
+
+      {missing > 0 && (
+        <Pressable
+          onPress={() => router.push('/missing')}
+          accessibilityRole="button"
+          className="flex-row items-center gap-3 rounded-3xl border-2 border-negative bg-negative-soft p-4"
+        >
+          <Text className="text-3xl">❓</Text>
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-ink">{missing === 1 ? '1 book is missing' : `${missing} books are missing`}</Text>
+            <Text className="text-sm text-muted">Tap to sort them out: found, borrowed or gone.</Text>
+          </View>
+          <Feather name="chevron-right" size={24} color={Colors.negative} />
+        </Pressable>
+      )}
 
       {showSetup
         ? (
@@ -164,7 +180,8 @@ export default function HomeScreen() {
       {stats.data && hasBook && (
         <Pressable onPress={() => router.push('/reports')} className="flex-row items-center justify-center gap-2 py-2">
           <Text className="text-base text-muted">
-            📚 {stats.data.total} books · ✍️ {stats.data.authors} authors
+            {`📚 ${stats.data.total} ${stats.data.total === 1 ? 'book' : 'books'}`}
+            {stats.data.authors > 0 && ` · ✍️ ${stats.data.authors} ${stats.data.authors === 1 ? 'author' : 'authors'}`}
           </Text>
         </Pressable>
       )}

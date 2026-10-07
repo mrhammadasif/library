@@ -48,8 +48,9 @@ export class LoansService {
       if (!book) {
         throw notFound('Book')
       }
-      if (book.status !== 'on_shelf') {
-        throw new DomainError(409, 'not_on_shelf', `Only books on a shelf can be borrowed (this one is ${STATUS_WORDS[book.status]})`)
+      // A missing book can turn out to be with someone: lending it records who has it (missing → borrowed).
+      if (book.status !== 'on_shelf' && book.status !== 'missing') {
+        throw new DomainError(409, 'not_on_shelf', `Only books on a shelf (or missing) can be borrowed (this one is ${STATUS_WORDS[book.status]})`)
       }
       let name = input.borrowerName?.trim() || null
       if (input.borrowerUserId) {

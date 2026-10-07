@@ -1,0 +1,95 @@
+# A book a check couldn't find shows a banner on Home, which opens "Missing books" with found / someone has it / gone.
+# TEST DATA ONLY: creates "Maestro Missing Library" and deletes it at the end.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+    permissions:
+      camera: allow
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Welcome|Hi .*"
+    timeout: 20000
+# Leftover from an aborted run: only ever a "Maestro …" test library, never anything else on the account.
+- runFlow:
+    when:
+      visible: "Maestro .*Library.*"
+    file: flows/delete-library.yaml
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro Missing Library"
+- hideKeyboard
+- tapOn: "Create library"
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+- tapOn: "Add a bookcase"
+- tapOn: "Add a bookcase"
+- tapOn:
+    id: "bookcase-name"
+- inputText: "Maestro Case"
+- hideKeyboard
+- tapOn: "Add"
+- extendedWaitUntil:
+    visible: ".*Bookcase added.*"
+    timeout: 15000
+- tapOn: "Top shelf"
+- extendedWaitUntil:
+    visible: "0 books"
+    timeout: 10000
+- tapOn: "Top shelf"
+- tapOn: "Add a book here"
+- tapOn: "Type it in"
+- tapOn:
+    id: "book-title"
+- inputText: "Maestro Lost Book"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Put it on the shelf"
+    direction: DOWN
+- tapOn: "Put it on the shelf"
+- extendedWaitUntil:
+    visible: ".*Added to Maestro Case.*"
+    timeout: 15000
+
+# ── A quick check that can't find it ─────────────────────────────────────────
+- launchApp
+- extendedWaitUntil:
+    visible: "Hi .*"
+    timeout: 20000
+- tapOn: "Book check.*"
+- tapOn: "Let's go.*"
+- extendedWaitUntil:
+    visible: "Can you find this book?"
+    timeout: 15000
+- tapOn: "It's not there.*"
+- tapOn: "Finish"
+
+# ── Home banner → Missing books ──────────────────────────────────────────────
+- launchApp
+- extendedWaitUntil:
+    visible: "1 book is missing"
+    timeout: 20000
+- takeScreenshot: missing-01-banner
+- tapOn: "1 book is missing"
+- extendedWaitUntil:
+    visible: "Maestro Lost Book"
+    timeout: 10000
+- assertVisible: "I found it"
+- assertVisible: "Someone has it"
+- assertVisible: "Gone for good"
+- takeScreenshot: missing-02-list
+- tapOn: "I found it"
+- extendedWaitUntil:
+    visible: ".*Nothing is missing.*"
+    timeout: 15000
+- takeScreenshot: missing-03-sorted
+
+# ── Clean up ─────────────────────────────────────────────────────────────────
+- launchApp
+- extendedWaitUntil:
+    visible: "Hi .*"
+    timeout: 20000
+- runFlow: flows/delete-library.yaml

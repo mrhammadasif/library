@@ -181,6 +181,9 @@ export default function BookScreen() {
         {b.status === 'missing' && can.audit && (
           <Button big icon="check" label="I found it!" loading={markFound.isPending} onPress={() => markFound.mutate({ libraryId: library.id, bookId: b.id }, { onSuccess: () => toast('Found! Thank you', '🎉') })} />
         )}
+        {b.status === 'missing' && can.lend && (
+          <Button variant="secondary" icon="users" label="Someone has it" onPress={() => router.push({ pathname: '/lend/[bookId]', params: { bookId: b.id } })} />
+        )}
         {b.status === 'archived' && can.archive && (
           <Button big icon="rotate-ccw" label="Bring it back" onPress={() => router.push({ pathname: '/move', params: { ids: b.id, mode: 'restore' } })} />
         )}

@@ -142,6 +142,15 @@ describe('books, loans, shelves and checks', () => {
   })
 
   describe('loans', () => {
+    it('records who has a missing book: missing → borrowed → back on its shelf', async () => {
+      const id = await add('Lost and found')
+      await t.db.prisma.book.update({ where: { id }, data: { status: 'missing' } })
+      await t.http().post(`${base()}/books/${id}/lend`).set('Cookie', lender.cookie).send({ borrowerName: 'Cousin Ali' }).expect(201)
+      expect((await t.http().get(`${base()}/books/${id}`).set('Cookie', lender.cookie)).body.status).toBe('borrowed')
+      await t.http().post(`${base()}/books/${id}/return`).set('Cookie', lender.cookie).send({}).expect(204)
+      expect((await t.http().get(`${base()}/books/${id}`).set('Cookie', lender.cookie)).body.status).toBe('on_shelf')
+    })
+
     it('lends, refuses to lend twice, lists, and returns to the home shelf', async () => {
       const id = await add('Dune')
       const due = new Date(Date.now() - 86_400_000).toISOString()
