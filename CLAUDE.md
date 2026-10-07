@@ -64,6 +64,10 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - Hooks (`src/hooks/*`) call the API with React Query; models (`src/models/*`) are aliases of the shared contract types.
 - Route guards (`src/app/_layout.tsx`): signed out → sign-in/sign-up/sign-in-code/forgot-password; signed in but
   unverified → verify-email only; verified without a library → welcome; otherwise the app. Devices + delete-account live in settings.
+- Google Cloud: the shared **"Nitroxis Technologies"** project (`nitroxis-technol-1759477873971`), used by every Nitroxis
+  Android app. It holds Library's Web + Android OAuth clients (package `com.nitroxis.library`; debug SHA-1 is RN's shared
+  debug key `5E:8F:16:…:F6:25`, EAS key still to add) and the Books API key (`GOOGLE_BOOKS_API_KEY` on the server; without a
+  key Google Books answers 429).
 - Google sign-in: `react-native-nitro-google-signin` (Android **Credential Manager**: one tap → create → account sheet) in
   `src/auth/GoogleSignIn.ts`. Its config plugin is NOT in app.json: Android needs none, and the plugin throws without an
   iOS `iosUrlScheme` (add it when an iOS OAuth client exists).
