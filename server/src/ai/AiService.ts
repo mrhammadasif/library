@@ -131,17 +131,24 @@ export class AiService {
       requirePermission(m, 'books.edit')
     }
     const library = await this.library(m.libraryId)
-    if (!library.enrichProvider) {
+    // The library's own key; otherwise a few free suggestions a day through the owner's OmniRoute.
+    const free = library.enrichProvider ? null : this.freeAi()
+    if (!library.enrichProvider && !free) {
       throw new DomainError(409, 'ai_not_configured', 'Add an AI key in Smart helpers to get tag suggestions')
     }
-    await this.takeAiRequest(library)
+    if (free) {
+      await this.takeFreeRequest(library)
+    }
+    else {
+      await this.takeAiRequest(library)
+    }
     // Web searches go out through the home connection, so they come from the library's daily allowance.
     const web = this.config.SEARXNG_URL && needsWebSearch(draft) && await this.allowance.take(library, 'web_search')
       ? relevantResults(draft, await searchWeb(this.config.SEARXNG_URL, bookQuery(draft), { apiKey: this.config.SEARXNG_API_KEY }))
       : []
     const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 60_000 }
-    const raw = await chatJson(await this.providerConfig(m.libraryId, library.enrichProvider), request)
-    return { enrichment: parseEnrichment(raw, web), provider: library.enrichProvider as string }
+    const raw = await chatJson(free ?? await this.providerConfig(m.libraryId, library.enrichProvider!), request)
+    return { enrichment: parseEnrichment(raw, web), provider: library.enrichProvider ?? 'free' }
   }
 
   /**
@@ -156,9 +163,31 @@ export class AiService {
     }
   }
 
+  /** The free tier's gateway, or null when the server offers none. */
+  private freeAi(): IAiConfig | null {
+    const { FREE_AI_API_KEY: apiKey, FREE_AI_BASE_URL: baseUrl, FREE_AI_MODEL: model } = this.config
+    return apiKey && this.config.FREE_AI_PER_LIBRARY > 0 ? { provider: 'openai_compatible', baseUrl, apiKey, model } : null
+  }
+
+  /** Free tier: the library's few a day (trusted libraries: unlimited), then the server-wide total. */
+  private async takeFreeRequest(library: { id: string, trusted: boolean }): Promise<void> {
+    const perDay = this.config.FREE_AI_PER_LIBRARY
+    if (!library.trusted && !await this.allowance.takeUpTo(library.id, 'free_ai', perDay)) {
+      throw new DomainError(429, 'free_ai_used_up', `Today's ${perDay} free AI suggestions are used up. Add your own free Gemini key in Smart helpers for more.`)
+    }
+    if (!await this.allowance.takeServer('free_ai', this.config.FREE_AI_DAILY_TOTAL)) {
+      throw new DomainError(429, 'free_ai_busy', 'Free AI is busy today. Add your own free Gemini key in Smart helpers to keep going.')
+    }
+  }
+
   async aiLimit(libraryId: string) {
     const library = await this.library(libraryId)
-    return { dailyLimit: library.aiDailyLimit, usedToday: await this.allowance.usedToday(libraryId, 'ai') }
+    const freeOn = !!this.freeAi()
+    return {
+      dailyLimit: library.aiDailyLimit,
+      usedToday: await this.allowance.usedToday(libraryId, 'ai'),
+      free: freeOn ? { perDay: this.config.FREE_AI_PER_LIBRARY, usedToday: await this.allowance.usedToday(libraryId, 'free_ai') } : null,
+    }
   }
 
   async setAiLimit(libraryId: string, dailyLimit: number | null): Promise<void> {

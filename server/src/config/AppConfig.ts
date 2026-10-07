@@ -21,6 +21,16 @@ export const AppConfigSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   COVERS_PUBLIC_URL: z.string().url().optional(),
+  /**
+   * Free tier: libraries without their own AI key get a few book-detail suggestions a day through the owner's OmniRoute
+   * (`FREE_AI_PER_LIBRARY`, default 5), capped server-wide (`FREE_AI_DAILY_TOTAL`) so sign-ups can't run up the bill.
+   * No key = no free tier. Text only: `hammad/free` can't read cover photos.
+   */
+  FREE_AI_BASE_URL: z.string().url().default('https://omniroute.home.nitroxis.com/v1'),
+  FREE_AI_API_KEY: z.string().optional(),
+  FREE_AI_MODEL: z.string().default('hammad/free'),
+  FREE_AI_PER_LIBRARY: z.coerce.number().int().min(0).default(5),
+  FREE_AI_DAILY_TOTAL: z.coerce.number().int().min(0).default(200),
   /** Test a library's AI key with a tiny request before saving it (off in the e2e suite unless a test turns it on). */
   AI_KEY_CHECK: z.stringbool().default(true),
   /** Self-hosted SearXNG (JSON format enabled) for web lookups during AI enrichment; unset = off. */

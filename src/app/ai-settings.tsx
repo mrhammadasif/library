@@ -135,6 +135,7 @@ export default function AiSettingsScreen() {
   const usage = useSetAiUsage()
   const canManage = useCan('ai.manage')
   const limit = useAiLimit(library.id, canManage)
+  const free = limit.data?.free ?? null
   const setLimit = useSetAiLimit()
   const configured = providers.data ?? []
   const visionCapable = configured.filter(p => p.supportsVision)
@@ -161,8 +162,11 @@ export default function AiSettingsScreen() {
         <Card className="gap-2 py-4">
           <Text className="text-lg font-bold text-ink">✨ Let AI fill in the details</Text>
           <Text className="text-base text-muted">
-            Add your own AI key and the app will suggest tags, categories and a description for each book, and recognise books from a cover photo. A Google Gemini key is free.
+            {free
+              ? `You get ${free.perDay} free AI suggestions a day (tags, categories, a description). Add your own key for as many as you like, and to recognise books from a cover photo. A Google Gemini key is free.`
+              : 'Add your own AI key and the app will suggest tags, categories and a description for each book, and recognise books from a cover photo. A Google Gemini key is free.'}
           </Text>
+          {free && <Text className="text-sm font-semibold text-ink">{`Free suggestions used today: ${free.usedToday} of ${free.perDay}`}</Text>}
         </Card>
       )}
       {providers.data && canManage && (
@@ -172,7 +176,7 @@ export default function AiSettingsScreen() {
             <Card className="gap-3 py-4">
               <Text className="text-sm font-semibold text-muted">Suggesting tags, categories and descriptions</Text>
               <View className="flex-row flex-wrap gap-2">
-                <Chip label="Off" selected={!library.enrichProvider} onPress={() => setUsage(null, library.visionProvider)} />
+                <Chip label={free ? `✨ Free (${free.perDay} a day)` : 'Off'} selected={!library.enrichProvider} onPress={() => setUsage(null, library.visionProvider)} />
                 {configured.map(p => (
                   <Chip key={p.provider} label={nameOf(p.provider)} selected={library.enrichProvider === p.provider} onPress={() => setUsage(p.provider, library.visionProvider)} />
                 ))}

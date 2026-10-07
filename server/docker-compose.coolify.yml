@@ -33,6 +33,12 @@ services:
       AI_KEYS_KEY: ${AI_KEYS_KEY}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
       GOOGLE_BOOKS_DAILY_LIMIT: ${GOOGLE_BOOKS_DAILY_LIMIT:-900}
+      # Free tier: a few AI suggestions per library per day through OmniRoute (key = Coolify secret; no key = off).
+      FREE_AI_BASE_URL: ${FREE_AI_BASE_URL:-https://omniroute.home.nitroxis.com/v1}
+      FREE_AI_API_KEY: ${FREE_AI_API_KEY:-}
+      FREE_AI_MODEL: ${FREE_AI_MODEL:-hammad/free}
+      FREE_AI_PER_LIBRARY: ${FREE_AI_PER_LIBRARY:-5}
+      FREE_AI_DAILY_TOTAL: ${FREE_AI_DAILY_TOTAL:-200}
       # Per-library daily allowances (trusted libraries exempt); when spent, lookups/enrichment degrade gracefully.
       LIBRARY_DAILY_GOOGLE_BOOKS: ${LIBRARY_DAILY_GOOGLE_BOOKS:-150}
       LIBRARY_DAILY_WEB_SEARCHES: ${LIBRARY_DAILY_WEB_SEARCHES:-50}

@@ -58,6 +58,12 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   cap on its AI requests (`libraries.ai_daily_limit`, null = no limit; `GET/PUT /ai/limit`). Every enrich/identify
   request is counted in `library_daily_usage` (kind `ai`), and over the cap → 429 `ai_daily_limit`.
   Cover recognition needs a vision-capable provider.
+- **Free tier:** libraries without their own key get `FREE_AI_PER_LIBRARY` (5) book-detail suggestions a day through the
+  owner's OmniRoute (`FREE_AI_BASE_URL`, `FREE_AI_API_KEY`, model `FREE_AI_MODEL` = `hammad/free`, provider `'free'`).
+  It's capped server-wide by `FREE_AI_DAILY_TOTAL` (200) in `server_daily_usage`. Trusted libraries skip only their
+  own cap. Over the cap → 429 `free_ai_used_up` / `free_ai_busy`, with a hint to add their own key. Text only:
+  `hammad/free` can't read images, so cover photos still need the library's own key. `/me.freeAiPerDay` tells the app
+  whether it's on (null = no key configured).
 - Google Books: every request goes through `GoogleBooksBudget` (`books-budget/`): a Postgres counter per **Pacific** day
   (Google's quota day), taken atomically (`INSERT … ON CONFLICT DO UPDATE … WHERE count < limit`), default 900/day
   (`GOOGLE_BOOKS_DAILY_LIMIT`, under the key's 1,000). When spent, or with no key, lookups use Open Library only.

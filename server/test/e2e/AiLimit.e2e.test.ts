@@ -26,7 +26,7 @@ describe('library ai daily limit', () => {
 
   it('counts AI requests with no limit, then stops at the limit the library chose', async () => {
     await enrich().expect(200)
-    expect((await t.http().get(`/api/libraries/${lib}/ai/limit`).set('Cookie', owner.cookie).expect(200)).body).toEqual({ dailyLimit: null, usedToday: 1 })
+    expect((await t.http().get(`/api/libraries/${lib}/ai/limit`).set('Cookie', owner.cookie).expect(200)).body).toEqual({ dailyLimit: null, usedToday: 1, free: null })
 
     await t.http().put(`/api/libraries/${lib}/ai/limit`).set('Cookie', owner.cookie).send({ dailyLimit: 2 }).expect(204)
     await enrich().expect(200)
@@ -34,7 +34,7 @@ describe('library ai daily limit', () => {
     expect(res.body).toMatchObject({ code: 'ai_daily_limit', message: expect.stringContaining('2 a day') })
     // Cover photos use the same allowance.
     await t.http().post(`/api/libraries/${lib}/ai/identify-cover`).set('Cookie', owner.cookie).send({ imageBase64: 'x'.repeat(200) }).expect(429)
-    expect((await t.http().get(`/api/libraries/${lib}/ai/limit`).set('Cookie', owner.cookie).expect(200)).body).toEqual({ dailyLimit: 2, usedToday: 2 })
+    expect((await t.http().get(`/api/libraries/${lib}/ai/limit`).set('Cookie', owner.cookie).expect(200)).body).toEqual({ dailyLimit: 2, usedToday: 2, free: null })
 
     await t.http().put(`/api/libraries/${lib}/ai/limit`).set('Cookie', owner.cookie).send({ dailyLimit: null }).expect(204)
     await enrich().expect(200)

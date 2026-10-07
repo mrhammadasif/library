@@ -21,6 +21,7 @@ import { StorageKeys } from '~/constants/StorageKeys'
 import { useAddBook, useTags } from '~/hooks/Books'
 import { enrichDraft, lookupIsbn, lookupText } from '~/hooks/Lookup'
 import { shelfLabels, useRacks } from '~/hooks/Shelves'
+import { useMe } from '~/hooks/Libraries'
 import { useCurrentLibrary } from '~/library/LibraryProvider'
 import { normalizeIsbn } from '~shared/isbn'
 import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft, fillBlanks, withNormalizedIsbn } from '~/utils/BookForm'
@@ -41,6 +42,7 @@ type AiState = 'off' | 'working' | 'done' | 'failed'
 export default function ReviewScreen() {
   const params = useLocalSearchParams<{ isbn?: string, pending?: string, from?: string, shelfId?: string }>()
   const { library } = useCurrentLibrary()
+  const me = useMe()
   const racks = useRacks(library.id)
   const tags = useTags(library.id)
   const addBook = useAddBook()
@@ -124,8 +126,8 @@ export default function ReviewScreen() {
   }
 
   function enrich(base: IBookFields) {
-    // Only with the library's own AI key (Smart helpers).
-    if (!library.enrichProvider || !base.title) {
+    // The library's own AI key, else the server's few free suggestions a day.
+    if (!(library.enrichProvider || me.data?.freeAiPerDay) || !base.title) {
       return
     }
     setAi('working')

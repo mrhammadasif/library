@@ -213,7 +213,8 @@ export interface IIdentification {
 
 export function parseIdentification(raw: unknown): IIdentification {
   const obj = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  const str = (v: unknown) => (typeof v === 'string' && v.trim() ? v.trim() : null)
+  // Models sometimes write "null" or "unknown" as text.
+  const str = (v: unknown) => (typeof v === 'string' && v.trim() && !/^(null|none|unknown|n\/?a)$/i.test(v.trim()) ? v.trim() : null)
   const confidence = typeof obj.confidence === 'number' ? Math.min(1, Math.max(0, obj.confidence)) : 0
   return {
     title: str(obj.title) ?? '',

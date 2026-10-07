@@ -23,7 +23,12 @@ export const AiUsageInput = z.object({ enrich: AiProviderSchema.nullable(), visi
 
 /** The library's own daily cap on AI requests (its key, its bill). null = no limit. */
 export const AiLimitInput = z.object({ dailyLimit: z.number().int().min(1).max(10_000).nullable() })
-export const AiLimitSchema = z.object({ dailyLimit: z.number().int().nullable(), usedToday: z.number().int() })
+export const AiLimitSchema = z.object({
+  dailyLimit: z.number().int().nullable(),
+  usedToday: z.number().int(),
+  /** The server's free tier for libraries without their own key; null = none. */
+  free: z.object({ perDay: z.number().int(), usedToday: z.number().int() }).nullable(),
+})
 export type IAiLimitDto = z.infer<typeof AiLimitSchema>
 
 export const EnrichInput = z.object({ draft: BookDraftSchema })

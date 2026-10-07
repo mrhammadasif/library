@@ -65,7 +65,7 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="cpu"
           label="Smart helpers (AI)"
-          hint={[library.enrichProvider && 'Tag ideas on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
+          hint={[(library.enrichProvider && 'Tag ideas on') || (me.data?.freeAiPerDay && `Free tag ideas (${me.data.freeAiPerDay} a day)`), library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
           onPress={canAi ? () => router.push('/ai-settings') : undefined}
           last
         />

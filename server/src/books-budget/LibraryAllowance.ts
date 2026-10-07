@@ -5,7 +5,7 @@ import { APP_CONFIG } from '../config/AppConfig'
 import { InjectPrisma } from '../prisma/Prisma'
 import { pacificDay } from './PacificDay'
 
-export type AllowanceKind = 'google_books' | 'web_search' | 'ai'
+export type AllowanceKind = 'google_books' | 'web_search' | 'ai' | 'free_ai'
 
 /** What a caller knows about the library: libraries the admin marked trusted have no daily allowance. */
 export interface IAllowanceScope {
@@ -43,6 +43,19 @@ export class LibraryAllowance {
       INSERT INTO library_daily_usage (library_id, day, kind, count) VALUES (${libraryId}::uuid, ${pacificDay(now)}::date, ${kind}, 1)
       ON CONFLICT (library_id, day, kind) DO UPDATE SET count = library_daily_usage.count + 1
       WHERE library_daily_usage.count < ${limit}
+      RETURNING count`
+    return rows.length > 0
+  }
+
+  /** One unit of today's server-wide `kind` (all libraries together), if fewer than `limit` were used. */
+  async takeServer(kind: AllowanceKind, limit: number, now = new Date()): Promise<boolean> {
+    if (limit <= 0) {
+      return false
+    }
+    const rows = await this.prisma.$queryRaw<{ count: number }[]>`
+      INSERT INTO server_daily_usage (day, kind, count) VALUES (${pacificDay(now)}::date, ${kind}, 1)
+      ON CONFLICT (day, kind) DO UPDATE SET count = server_daily_usage.count + 1
+      WHERE server_daily_usage.count < ${limit}
       RETURNING count`
     return rows.length > 0
   }

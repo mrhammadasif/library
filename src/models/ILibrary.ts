@@ -16,4 +16,6 @@ export interface IMe {
   image: string | null
   /** Server admin: may mark libraries trusted (no daily allowances). */
   isAdmin: boolean
+  /** Free AI suggestions per library per day for libraries without their own key; null = the server offers none. */
+  freeAiPerDay: number | null
 }

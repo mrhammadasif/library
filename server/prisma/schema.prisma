@@ -453,6 +453,16 @@ model GoogleBooksUsage {
   @@map("google_books_usage")
 }
 
+/// Server-wide daily counters (Pacific day), e.g. kind = free_ai: the free tier's total across all libraries.
+model ServerDailyUsage {
+  day   DateTime @db.Date
+  kind  String
+  count Int      @default(0)
+
+  @@id([day, kind])
+  @@map("server_daily_usage")
+}
+
 /// Per-library daily allowances (Pacific day) for shared outbound services: kind = google_books | web_search.
 model LibraryDailyUsage {
   libraryId String   @map("library_id") @db.Uuid
