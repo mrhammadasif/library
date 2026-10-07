@@ -1,6 +1,6 @@
 import type { IBook, IBookFields } from '~/models/IBook'
 import type { IBookDraft, IEnrichment } from '~/models/IBookDraft'
-import { isbn13To10 } from '~shared/isbn'
+import { isbn13To10, normalizeIsbn } from '~shared/isbn'
 
 export function emptyFields(): IBookFields {
   return {
@@ -126,4 +126,16 @@ export function fillBlanks(base: IBookDraft, extra: IBookDraft): IBookDraft {
     tags: union(base.tags, extra.tags, 10),
     coverUrl: pick('coverUrl'),
   }
+}
+
+/**
+ * Before saving: the ISBN box accepts ISBN-10s and hyphens, the book is stored with its ISBN-13 (and ISBN-10 when one
+ * exists). Returns null when a typed ISBN is invalid, so the form can ask for a fix.
+ */
+export function withNormalizedIsbn(fields: IBookFields): IBookFields | null {
+  if (!fields.isbn13) {
+    return { ...fields, isbn13: null }
+  }
+  const isbn = normalizeIsbn(fields.isbn13)
+  return isbn ? { ...fields, isbn13: isbn.isbn13, isbn10: isbn.isbn10 } : null
 }

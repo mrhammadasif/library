@@ -1,6 +1,6 @@
 import { router } from 'expo-router'
 import { useState } from 'react'
-import { Alert, Text, View } from 'react-native'
+import { Alert, Switch, Text, View } from 'react-native'
 import { useAuth } from '~/auth/AuthProvider'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
@@ -8,8 +8,9 @@ import { Field } from '~/components/Field'
 import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
 import { SettingsCard, SettingsRow } from '~/components/SettingsCard'
+import { Colors } from '~/constants/Colors'
 import { describePermissions } from '~/constants/Permissions'
-import { useDeleteLibrary, useMe, useRenameLibrary } from '~/hooks/Libraries'
+import { useMe, useRenameLibrary, useSetTrusted } from '~/hooks/Libraries'
 import { useRemoveMember, useUpdateDisplayName } from '~/hooks/Members'
 import { useCan, useCurrentLibrary, useLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
@@ -23,19 +24,12 @@ export default function SettingsScreen() {
   const canMembers = useCan('members.manage')
   const canAi = useCan('ai.manage')
   const rename = useRenameLibrary()
-  const remove = useDeleteLibrary()
+  const trusted = useSetTrusted()
   const leave = useRemoveMember()
   const updateName = useUpdateDisplayName()
   const me = useMe()
   const [libraryName, setLibraryName] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
-
-  function confirmDelete() {
-    Alert.alert(`Delete "${library.name}"?`, 'Every book, shelf, loan and audit in it is deleted for all members. This can\'t be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete library', style: 'destructive', onPress: () => remove.mutate(library.id) },
-    ])
-  }
 
   function confirmLeave() {
     Alert.alert(`Leave "${library.name}"?`, 'You\'ll need a new invite code to join again.', [
@@ -44,7 +38,7 @@ export default function SettingsScreen() {
     ])
   }
 
-  const error = rename.error ?? remove.error ?? leave.error ?? updateName.error
+  const error = rename.error ?? leave.error ?? updateName.error
   return (
     <Screen header={<Header title="Settings" />}>
       <SettingsCard title="Your libraries">
@@ -71,11 +65,26 @@ export default function SettingsScreen() {
         <SettingsRow
           icon="cpu"
           label="Smart helpers (AI)"
-          hint={[(library.enrichProvider || library.homeAiAllowed) && 'Tag ideas on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
-          onPress={canAi || me.data?.isAdmin ? () => router.push('/ai-settings') : undefined}
+          hint={[library.enrichProvider && 'Tag ideas on', library.visionProvider && 'Cover photos on'].filter(Boolean).join(' · ') || (canAi ? 'Off: tap to set up' : 'Off')}
+          onPress={canAi ? () => router.push('/ai-settings') : undefined}
           last
         />
       </SettingsCard>
+
+      {me.data?.isAdmin && (
+        <Card className="flex-row items-center gap-3 py-4">
+          <Text className="text-2xl">🛡️</Text>
+          <View className="flex-1">
+            <Text className="text-lg font-bold text-ink">Trusted library</Text>
+            <Text className="text-sm text-muted">Server admin: no daily limits on book lookups and web searches.</Text>
+          </View>
+          <Switch
+            value={library.trusted}
+            onValueChange={value => trusted.mutate({ libraryId: library.id, trusted: value })}
+            trackColor={{ true: Colors.primary }}
+          />
+        </Card>
+      )}
 
       {isOwner && (libraryName === null
         ? <Button variant="secondary" icon="edit-3" label="Rename library" onPress={() => setLibraryName(library.name)} />
@@ -112,7 +121,7 @@ export default function SettingsScreen() {
       {error && <Text className="text-center text-sm text-negative">{errorMessage(error)}</Text>}
       <View className="gap-3">
         <Button variant="danger" icon="log-out" label="Leave this library" onPress={confirmLeave} />
-        {isOwner && <Button variant="danger" icon="trash-2" label="Delete this library" onPress={confirmDelete} />}
+        {isOwner && <Button variant="danger" icon="trash-2" label="Delete this library" onPress={() => router.push('/delete-library')} />}
       </View>
     </Screen>
   )

@@ -11,8 +11,7 @@ import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
 import { SectionHeader } from '~/components/SectionHeader'
 import { Colors } from '~/constants/Colors'
-import { useAiProviders, useDeleteAiProvider, useSetAiProvider, useSetAiUsage } from '~/hooks/Ai'
-import { useMe, useSetHomeAi } from '~/hooks/Libraries'
+import { useAiLimit, useAiProviders, useDeleteAiProvider, useSetAiLimit, useSetAiProvider, useSetAiUsage } from '~/hooks/Ai'
 import { useCan, useCurrentLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
 
@@ -32,6 +31,9 @@ const PROVIDERS: IProviderInfo[] = [
 ]
 const SELF_HOSTED: IProviderInfo = { key: 'openai_compatible', name: 'Self-hosted', defaultModel: '', blurb: 'Any OpenAI-compatible endpoint over HTTPS (e.g. your own gateway).' }
 const ALL_PROVIDERS = [...PROVIDERS, SELF_HOSTED]
+
+/** Daily caps offered for the library's own key (null = no limit). */
+const LIMITS: (number | null)[] = [null, 20, 50, 100, 200]
 
 function ProviderForm({ libraryId, provider, existing, onSaved }: {
   libraryId: string
@@ -125,15 +127,15 @@ function ProviderForm({ libraryId, provider, existing, onSaved }: {
 
 /**
  * Per-library AI: people bring their own key (encrypted on the server, tested on save); which provider fills in book
- * details and which reads cover photos. Home AI (the server's own key) only appears for libraries the admin allowed.
+ * details and which reads cover photos. The server has no AI key of its own.
  */
 export default function AiSettingsScreen() {
   const { library } = useCurrentLibrary()
   const providers = useAiProviders(library.id)
   const usage = useSetAiUsage()
-  const me = useMe()
-  const homeAi = useSetHomeAi()
   const canManage = useCan('ai.manage')
+  const limit = useAiLimit(library.id, canManage)
+  const setLimit = useSetAiLimit()
   const configured = providers.data ?? []
   const visionCapable = configured.filter(p => p.supportsVision)
   const nameOf = (key: AiProvider) => ALL_PROVIDERS.find(p => p.key === key)!.name
@@ -142,9 +144,9 @@ export default function AiSettingsScreen() {
     usage.mutate({ libraryId: library.id, enrich, vision })
   }
 
-  // A newly added key should just work: switch it on for whatever isn't using anything yet (Home AI stays if allowed).
+  // A newly added key should just work: switch it on for whatever isn't using anything yet.
   function startUsing(provider: AiProvider, supportsVision: boolean) {
-    const enrich = library.enrichProvider ?? (library.homeAiAllowed ? null : provider)
+    const enrich = library.enrichProvider ?? provider
     const vision = library.visionProvider ?? (supportsVision ? provider : null)
     if (enrich !== library.enrichProvider || vision !== library.visionProvider) {
       setUsage(enrich, vision)
@@ -155,21 +157,7 @@ export default function AiSettingsScreen() {
     <Screen header={<Header title="Smart helpers (AI)" subtitle={library.name} />}>
       {providers.isPending && <Loading />}
       {providers.error && <ErrorState error={providers.error} onRetry={providers.refetch} />}
-      {me.data?.isAdmin && (
-        <Card className="flex-row items-center gap-3 py-4">
-          <Text className="text-2xl">🏠</Text>
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-ink">Home AI</Text>
-            <Text className="text-sm text-muted">Server admin: let this library use the home server's AI for free tag ideas.</Text>
-          </View>
-          <Switch
-            value={library.homeAiAllowed}
-            onValueChange={allowed => homeAi.mutate({ libraryId: library.id, allowed })}
-            trackColor={{ true: Colors.primary }}
-          />
-        </Card>
-      )}
-      {providers.data && canManage && configured.length === 0 && !library.homeAiAllowed && (
+      {providers.data && canManage && configured.length === 0 && (
         <Card className="gap-2 py-4">
           <Text className="text-lg font-bold text-ink">✨ Let AI fill in the details</Text>
           <Text className="text-base text-muted">
@@ -184,7 +172,7 @@ export default function AiSettingsScreen() {
             <Card className="gap-3 py-4">
               <Text className="text-sm font-semibold text-muted">Suggesting tags, categories and descriptions</Text>
               <View className="flex-row flex-wrap gap-2">
-                <Chip label={library.homeAiAllowed ? '🏠 Home AI (free)' : 'Off'} selected={!library.enrichProvider} onPress={() => setUsage(null, library.visionProvider)} />
+                <Chip label="Off" selected={!library.enrichProvider} onPress={() => setUsage(null, library.visionProvider)} />
                 {configured.map(p => (
                   <Chip key={p.provider} label={nameOf(p.provider)} selected={library.enrichProvider === p.provider} onPress={() => setUsage(p.provider, library.visionProvider)} />
                 ))}
@@ -200,6 +188,32 @@ export default function AiSettingsScreen() {
               {usage.error && <Text className="text-sm text-negative">{errorMessage(usage.error)}</Text>}
             </Card>
           </View>
+          {configured.length > 0 && (
+            <View className="gap-3">
+              <SectionHeader title="Daily limit" />
+              <Card className="gap-3 py-4">
+                <Text className="text-base text-muted">
+                  AI requests use your own key, so you choose how many a day this library may make. When they're used up, books still save; AI just waits until tomorrow.
+                </Text>
+                <View className="flex-row flex-wrap gap-2">
+                  {LIMITS.map(n => (
+                    <Chip
+                      key={n ?? 'none'}
+                      label={n === null ? 'No limit' : `${n} a day`}
+                      selected={(limit.data?.dailyLimit ?? null) === n}
+                      onPress={() => setLimit.mutate({ libraryId: library.id, dailyLimit: n })}
+                    />
+                  ))}
+                </View>
+                {limit.data && (
+                  <Text className="text-sm font-semibold text-ink">
+                    {`Used today: ${limit.data.usedToday}${limit.data.dailyLimit ? ` of ${limit.data.dailyLimit}` : ''}`}
+                  </Text>
+                )}
+                {setLimit.error && <Text className="text-sm text-negative">{errorMessage(setLimit.error)}</Text>}
+              </Card>
+            </View>
+          )}
           <View className="gap-3">
             <SectionHeader title="Providers" />
             {PROVIDERS.map(p => (

@@ -1,4 +1,4 @@
-// TEST DATA ONLY. AI enrichment reading SearXNG web results; outbound HTTP (SearXNG, Home AI) is stubbed.
+// TEST DATA ONLY. AI enrichment reading SearXNG web results; outbound HTTP (SearXNG, the library's AI provider) is stubbed.
 import type { ITestUser } from '../setup/Fixtures'
 import type { ITestApp } from '../setup/TestApp'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -28,7 +28,9 @@ describe('ai enrichment with web search', () => {
     await t.db.reset()
     owner = await signUp(t, 'owner@test.local')
     lib = await createLibrary(t, owner)
-    await t.db.prisma.library.update({ where: { id: lib }, data: { homeAiAllowed: true } })
+    // The library's own key (key check is off in tests, so no request is made here).
+    await t.http().put(`/api/libraries/${lib}/ai/providers/gemini`).set('Cookie', owner.cookie).send({ model: 'gemini-3.1-flash-lite', apiKey: 'own-key' }).expect(204)
+    await t.http().put(`/api/libraries/${lib}/ai/usage`).set('Cookie', owner.cookie).send({ enrich: 'gemini', vision: null }).expect(204)
   })
 
   function stub(ai: unknown) {
@@ -64,6 +66,6 @@ describe('ai enrichment with web search', () => {
     const fetchMock = stub(aiReply(''))
     const complete = { ...draft, isbn13: '9781999802752', publisher: 'Watson', publishedYear: 2021, pages: 64, description: 'Known.', categories: ['Islamic'] }
     await t.http().post(`/api/libraries/${lib}/ai/enrich`).set('Cookie', owner.cookie).send({ draft: complete }).expect(200)
-    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(['http://home-ai.test/v1/chat/completions'])
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(['https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'])
   })
 })

@@ -1,7 +1,7 @@
 # Coolify "Docker Compose" resource. Base directory: /server  Compose file: /docker-compose.coolify.yml
 # (Coolify uses the base directory as the compose project directory, so `context: ..` is the repo root.)
 # Domain: https://api.library.home.nitroxis.com → api:3000 (set in Coolify). All values come from Coolify's env UI.
-# Home AI (OmniRoute) and SearXNG are reached through their public home-server URLs with API keys.
+# SearXNG is reached through its public home-server URL with an API key. AI keys come from each library (the app).
 # Postgres is the shared Coolify database "nitroxis-pg" (project "common"; database + role `library`, pg_trgm pre-created),
 # reached over the `coolify` network ("Connect To Predefined Network"); DATABASE_URL points at its container name.
 services:
@@ -26,10 +26,6 @@ services:
       S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
       COVERS_PUBLIC_URL: ${COVERS_PUBLIC_URL}
-      # Home AI: OmniRoute (OpenAI-compatible) on the home server; the key is a Coolify secret.
-      HOME_AI_BASE_URL: ${HOME_AI_BASE_URL:-https://omniroute.home.nitroxis.com/v1}
-      HOME_AI_API_KEY: ${HOME_AI_API_KEY:-}
-      HOME_AI_MODEL: ${HOME_AI_MODEL:-gemini-3.1-flash-lite}
       # The home SearXNG (locked; its own Coolify network), reached via its public URL + API key.
       SEARXNG_URL: ${SEARXNG_URL:-https://searxng.home.nitroxis.com}
       SEARXNG_API_KEY: ${SEARXNG_API_KEY:-}
@@ -37,6 +33,6 @@ services:
       AI_KEYS_KEY: ${AI_KEYS_KEY}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
       GOOGLE_BOOKS_DAILY_LIMIT: ${GOOGLE_BOOKS_DAILY_LIMIT:-900}
-      # Per-library daily allowances (Home AI libraries exempt); when spent, lookups/enrichment degrade gracefully.
+      # Per-library daily allowances (trusted libraries exempt); when spent, lookups/enrichment degrade gracefully.
       LIBRARY_DAILY_GOOGLE_BOOKS: ${LIBRARY_DAILY_GOOGLE_BOOKS:-150}
       LIBRARY_DAILY_WEB_SEARCHES: ${LIBRARY_DAILY_WEB_SEARCHES:-50}

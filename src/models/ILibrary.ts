@@ -14,6 +14,6 @@ export interface IMe {
   email: string
   emailVerified: boolean
   image: string | null
-  /** Server admin: may switch Home AI on for libraries. */
+  /** Server admin: may mark libraries trusted (no daily allowances). */
   isAdmin: boolean
 }

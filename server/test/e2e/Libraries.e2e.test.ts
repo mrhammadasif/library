@@ -29,7 +29,7 @@ describe('libraries, members and invites', () => {
   it('lists my libraries with effective permissions', async () => {
     const mine = await t.http().get('/api/libraries').set('Cookie', owner.cookie).expect(200)
     expect(mine.body).toHaveLength(1)
-    expect(mine.body[0]).toMatchObject({ role: 'owner', library: { id: lib, name: 'Home', homeAiAllowed: false } })
+    expect(mine.body[0]).toMatchObject({ role: 'owner', library: { id: lib, name: 'Home', trusted: false } })
     expect(mine.body[0].permissions).toHaveLength(10)
     const lenderLibs = await t.http().get('/api/libraries').set('Cookie', lender.cookie).expect(200)
     expect(lenderLibs.body[0].permissions).toEqual(['loans.manage'])
@@ -59,8 +59,12 @@ describe('libraries, members and invites', () => {
     const res = await t.http().patch(`/api/libraries/${lib}`).set('Cookie', manager.cookie).send({ name: 'Mine' }).expect(403)
     expect(res.body.code).toBe('owner_only')
     await t.http().patch(`/api/libraries/${lib}`).set('Cookie', owner.cookie).send({ name: 'Family' }).expect(204)
-    await t.http().delete(`/api/libraries/${lib}`).set('Cookie', manager.cookie).expect(403)
-    await t.http().delete(`/api/libraries/${lib}`).set('Cookie', owner.cookie).expect(204)
+    await t.http().delete(`/api/libraries/${lib}`).set('Cookie', manager.cookie).send({ confirmName: 'Family' }).expect(403)
+    // The exact name must be typed back: missing, wrong case or another name → nothing is deleted.
+    await t.http().delete(`/api/libraries/${lib}`).set('Cookie', owner.cookie).expect(400)
+    expect((await t.http().delete(`/api/libraries/${lib}`).set('Cookie', owner.cookie).send({ confirmName: 'family' }).expect(400)).body.code).toBe('name_mismatch')
+    expect(await t.db.prisma.library.count({ where: { id: lib } })).toBe(1)
+    await t.http().delete(`/api/libraries/${lib}`).set('Cookie', owner.cookie).send({ confirmName: ' Family ' }).expect(204)
     expect(await t.db.prisma.libraryMember.count()).toBe(0)
   })
 
@@ -162,12 +166,12 @@ describe('libraries, members and invites', () => {
     })
   })
 
-  it('lets only the server admin switch Home AI on', async () => {
+  it('lets only the server admin mark a library trusted', async () => {
     const admin = await signUp(t, 'admin@test.local')
-    const res = await t.http().put(`/api/libraries/${lib}/home-ai`).set('Cookie', owner.cookie).send({ allowed: true }).expect(403)
+    const res = await t.http().put(`/api/libraries/${lib}/trusted`).set('Cookie', owner.cookie).send({ trusted: true }).expect(403)
     expect(res.body.code).toBe('admin_only')
-    await t.http().put(`/api/libraries/${lib}/home-ai`).set('Cookie', admin.cookie).send({ allowed: true }).expect(204)
+    await t.http().put(`/api/libraries/${lib}/trusted`).set('Cookie', admin.cookie).send({ trusted: true }).expect(204)
     const libs = await t.http().get('/api/libraries').set('Cookie', owner.cookie).expect(200)
-    expect(libs.body[0].library.homeAiAllowed).toBe(true)
+    expect(libs.body[0].library.trusted).toBe(true)
   })
 })

@@ -1,0 +1,78 @@
+# Typing an ISBN finds the book; Devices shows "This device" and "Sign out all other devices"; deleting a library
+# needs its name. TEST DATA ONLY: creates "Maestro Launch Library" and deletes it at the end.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+    permissions:
+      camera: allow
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Welcome|Hi .*"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Welcome"
+    file: flows/delete-library.yaml
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro Launch Library"
+- hideKeyboard
+- tapOn: "Create library"
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+
+# ── Find a book by typing its ISBN-10 (with the X-free Dune ISBN) ────────────
+- tapOn: "Scan a book"
+- tapOn: "Type it in"
+- scrollUntilVisible:
+    element:
+      id: "book-isbn"
+    direction: DOWN
+- tapOn:
+    id: "book-isbn"
+- inputText: "0441172717"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Find it by ISBN"
+    direction: DOWN
+- tapOn: "Find it by ISBN"
+- extendedWaitUntil:
+    visible: "Dune"
+    timeout: 20000
+- takeScreenshot: launch-01-isbn-found
+- back
+- back
+
+# ── Devices ──────────────────────────────────────────────────────────────────
+- tapOn: "Settings"
+- scrollUntilVisible:
+    element: "Your devices|Devices.*"
+    direction: DOWN
+- tapOn: "Your devices|Devices.*"
+- extendedWaitUntil:
+    visible: ".*This device.*"
+    timeout: 10000
+- takeScreenshot: launch-02-devices
+- back
+
+# ── Delete page: warnings, and the button stays locked until the name matches ─
+- scrollUntilVisible:
+    element: "Delete this library"
+    direction: DOWN
+- tapOn: "Delete this library"
+- extendedWaitUntil:
+    visible: "This can't be undone"
+    timeout: 10000
+- tapOn:
+    id: "delete-library-confirm"
+- inputText: "maestro launch library"
+- hideKeyboard
+- assertVisible: "That doesn't match yet."
+- takeScreenshot: launch-03-delete-locked
+- back
+- back
+- runFlow: flows/delete-library.yaml

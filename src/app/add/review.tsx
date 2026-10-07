@@ -22,7 +22,8 @@ import { useAddBook, useTags } from '~/hooks/Books'
 import { enrichDraft, lookupIsbn, lookupText } from '~/hooks/Lookup'
 import { shelfLabels, useRacks } from '~/hooks/Shelves'
 import { useCurrentLibrary } from '~/library/LibraryProvider'
-import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft, fillBlanks } from '~/utils/BookForm'
+import { normalizeIsbn } from '~shared/isbn'
+import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft, fillBlanks, withNormalizedIsbn } from '~/utils/BookForm'
 import { hexToColorName } from '~/utils/ColorName'
 import { captureCover } from '~/utils/CoverPhoto'
 import { takePendingDraft } from '~/utils/DraftStore'
@@ -54,6 +55,7 @@ export default function ReviewScreen() {
   const [shelfId, setShelfId] = useState<string | null>(params.shelfId ?? null)
   const [lookup, setLookup] = useState<{ loading: boolean, result: ILookupResult | null, error: string | null }>({ loading: !!params.isbn, result: null, error: null })
   const [ai, setAi] = useState<AiState>('off')
+  const [aiError, setAiError] = useState<string | null>(null)
   const [titleError, setTitleError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -122,11 +124,12 @@ export default function ReviewScreen() {
   }
 
   function enrich(base: IBookFields) {
-    // The library's own AI provider, or the home server's AI when the admin allowed it for this library.
-    if (!(library.enrichProvider || library.homeAiAllowed) || !base.title) {
+    // Only with the library's own AI key (Smart helpers).
+    if (!library.enrichProvider || !base.title) {
       return
     }
     setAi('working')
+    setAiError(null)
     enrichDraft(library.id, fieldsToDraft(base))
       .then(({ enrichment }) => {
         const foundIsbn = enrichment.isbn13 && !base.isbn13 ? enrichment.isbn13 : null
@@ -139,7 +142,10 @@ export default function ReviewScreen() {
           fillFromIsbn(foundIsbn, enrichment)
         }
       })
-      .catch(() => setAi('failed'))
+      .catch((e) => {
+        setAi('failed')
+        setAiError(errorMessage(e))
+      })
   }
 
   /** Fills blank, untouched fields from the ISBN's database record, falling back to what the AI read on the web. */
@@ -194,9 +200,18 @@ export default function ReviewScreen() {
     }
   }
 
+  /** A typed ISBN finds the exact edition (keeping whatever was typed); otherwise search by title and author. */
   async function findOnline() {
     setLookup({ loading: true, result: null, error: null })
     try {
+      if (typedIsbn) {
+        const result = await lookupIsbn(library.id, typedIsbn.isbn13)
+        setLookup({ loading: false, result, error: result.draft ? null : 'Nothing found for that ISBN. Type the title and we\'ll save it with the ISBN.' })
+        if (result.draft) {
+          applyDraft(fillBlanks(fieldsToDraft({ ...fields, isbn13: typedIsbn.isbn13, isbn10: typedIsbn.isbn10 }), result.draft))
+        }
+        return
+      }
       const result = await lookupText(library.id, fields.title, fields.authors[0])
       setLookup({ loading: false, result, error: result.candidates.length ? null : 'Nothing found online.' })
     }
@@ -214,12 +229,17 @@ export default function ReviewScreen() {
       setSaveError('Pick a shelf first 👆')
       return
     }
+    const ready = withNormalizedIsbn(fields)
+    if (!ready) {
+      setSaveError('That ISBN doesn\'t look right. Fix it or clear it 👆')
+      return
+    }
     setSaving(true)
     setSaveError(null)
     try {
       const id = randomUUID()
       const coverPath = localCover ? await uploadCover(library.id, id, localCover) : fields.coverPath
-      await addBook.mutateAsync({ libraryId: library.id, shelfId, id, fields: { ...fields, coverPath } })
+      await addBook.mutateAsync({ libraryId: library.id, shelfId, id, fields: { ...ready, coverPath } })
       await writeJson(StorageKeys.LastShelf(library.id), shelfId)
       toast(`Added to ${shelfLabels(racks.data).get(shelfId) ?? 'the shelf'}`, '📚')
       // From the scanner: straight back to it, ready for the next book.
@@ -238,6 +258,7 @@ export default function ReviewScreen() {
     }
   }
 
+  const typedIsbn = fields.isbn13 ? normalizeIsbn(fields.isbn13) : null
   const existing = lookup.result?.existingCopies ?? []
   const candidates = lookup.result?.candidates ?? []
   const found = !!fields.title && !lookup.loading
@@ -274,6 +295,7 @@ export default function ReviewScreen() {
         </Card>
       )}
       {ai === 'working' && <Text className="text-center text-base text-muted">✨ Adding tags with AI…</Text>}
+      {ai === 'failed' && aiError && <Text className="text-center text-sm text-warn">✨ {aiError}</Text>}
 
       {candidates.length > 0 && (
         <View className="gap-2">
@@ -300,9 +322,15 @@ export default function ReviewScreen() {
             <Text className="text-center text-base text-muted">We couldn't find this book online. Type its name below 👇</Text>
           )}
           <Collapsible title={fields.title ? '✏️ Fix the title or author' : '✏️ Title and author'} initiallyOpen={!fields.title}>
-            <BookBasicsForm fields={fields} onChange={onChange} titleError={titleError} />
+            <BookBasicsForm fields={fields} onChange={onChange} titleError={titleError} isbn />
             {!params.isbn && !params.pending && (
-              <Button variant="secondary" icon="globe" label="Find it online" disabled={!fields.title.trim()} onPress={findOnline} />
+              <Button
+                variant="secondary"
+                icon="globe"
+                label={typedIsbn ? 'Find it by ISBN' : 'Find it online'}
+                disabled={!typedIsbn && !fields.title.trim()}
+                onPress={findOnline}
+              />
             )}
           </Collapsible>
 
@@ -333,7 +361,7 @@ export default function ReviewScreen() {
           </View>
 
           <Collapsible title="More details">
-            <BookDetailsForm fields={fields} onChange={onChange} tagSuggestions={(tags.data ?? []).map(t => t.tag)} />
+            <BookDetailsForm fields={fields} onChange={onChange} tagSuggestions={(tags.data ?? []).map(t => t.tag)} isbn={false} />
           </Collapsible>
 
           {saveError && <Text className="text-center text-base text-negative">{saveError}</Text>}

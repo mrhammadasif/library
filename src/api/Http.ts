@@ -2,7 +2,7 @@ import type { z } from 'zod'
 import type { Query } from '~/api/ApiError'
 import { buildQuery, toApiError } from '~/api/ApiError'
 import { authClient } from '~/api/Auth'
-import { API_URL, COVERS_URL } from '~/api/Env'
+import { API_URL, COVERS_URL, USER_AGENT } from '~/api/Env'
 
 interface IRequest<T> {
   body?: unknown
@@ -17,6 +17,7 @@ export async function request<T = void>(method: 'GET' | 'POST' | 'PUT' | 'PATCH'
     headers: {
       'Content-Type': 'application/json',
       'Cookie': await authClient.getCookie(),
+      'User-Agent': USER_AGENT,
     },
     body: body === undefined ? undefined : JSON.stringify(body),
     credentials: 'omit',
@@ -34,7 +35,7 @@ export const api = {
   post: <T = void>(path: string, body?: unknown, opts?: IRequest<T>) => request<T>('POST', path, { ...opts, body: body ?? {} }),
   put: <T = void>(path: string, body?: unknown) => request<T>('PUT', path, { body: body ?? {} }),
   patch: <T = void>(path: string, body?: unknown) => request<T>('PATCH', path, { body: body ?? {} }),
-  delete: <T = void>(path: string) => request<T>('DELETE', path),
+  delete: <T = void>(path: string, body?: unknown) => request<T>('DELETE', path, { body }),
 }
 
 /** Public URL of an uploaded cover (Garage), or the external cover URL from the book APIs. */

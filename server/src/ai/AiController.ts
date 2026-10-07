@@ -1,13 +1,14 @@
 import type { IMembership } from '../auth/Access'
 import { Body, Controller, Delete, Get, HttpCode, Param, ParseEnumPipe, Post, Put } from '@nestjs/common'
 import { createZodDto } from 'nestjs-zod'
-import { AiUsageInput, EnrichInput, IdentifyCoverInput, SetAiProviderInput } from '../../../shared/contracts/Ai'
+import { AiLimitInput, AiUsageInput, EnrichInput, IdentifyCoverInput, SetAiProviderInput } from '../../../shared/contracts/Ai'
 import { AllowUnverified, Membership, RequireLibrary } from '../auth/Access'
 import { AiProvider } from '../generated/prisma/client'
 import { AiService } from './AiService'
 
 class SetAiProviderDto extends createZodDto(SetAiProviderInput) {}
 class AiUsageDto extends createZodDto(AiUsageInput) {}
+class AiLimitDto extends createZodDto(AiLimitInput) {}
 class EnrichDto extends createZodDto(EnrichInput) {}
 class IdentifyCoverDto extends createZodDto(IdentifyCoverInput) {}
 
@@ -42,6 +43,20 @@ export class AiController {
   @HttpCode(204)
   usage(@Membership() m: IMembership, @Body() body: AiUsageDto) {
     return this.ai.setUsage(m.libraryId, body)
+  }
+
+  /** The library's own daily AI cap and today's use. */
+  @Get('limit')
+  @RequireLibrary('ai.manage')
+  limit(@Membership() m: IMembership) {
+    return this.ai.aiLimit(m.libraryId)
+  }
+
+  @Put('limit')
+  @RequireLibrary('ai.manage')
+  @HttpCode(204)
+  setLimit(@Membership() m: IMembership, @Body() body: AiLimitDto) {
+    return this.ai.setAiLimit(m.libraryId, body.dailyLimit)
   }
 
   /** Needs books.add or books.edit (checked in the service). */

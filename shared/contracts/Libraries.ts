@@ -6,7 +6,10 @@ export const LibrarySchema = z.object({
   name: z.string(),
   enrichProvider: AiProviderSchema.nullable(),
   visionProvider: AiProviderSchema.nullable(),
-  homeAiAllowed: z.boolean(),
+  /** Set by the server admin: no daily allowances. */
+  trusted: z.boolean(),
+  /** AI requests per day this library allows itself (null = no limit). */
+  aiDailyLimit: z.number().int().nullable(),
 })
 
 export const MembershipSchema = z.object({
@@ -18,7 +21,9 @@ export const MembershipSchema = z.object({
 export type IMembershipDto = z.infer<typeof MembershipSchema>
 
 export const LibraryNameInput = z.object({ name: z.string().trim().min(1).max(80) })
-export const HomeAiInput = z.object({ allowed: z.boolean() })
+export const TrustedInput = z.object({ trusted: z.boolean() })
+/** Deleting a library needs its exact name typed back (the app's confirmation page; enforced here too). */
+export const DeleteLibraryInput = z.object({ confirmName: z.string().max(200) })
 
 export const MemberSchema = z.object({
   userId: IdSchema,

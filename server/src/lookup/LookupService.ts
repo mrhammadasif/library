@@ -16,7 +16,7 @@ export class LookupService {
   ) {}
 
   async lookup(libraryId: string, input: { isbn?: string, title?: string, author?: string }): Promise<ILookupResultDto> {
-    const scope = await this.prisma.library.findUniqueOrThrow({ where: { id: libraryId }, select: { id: true, homeAiAllowed: true } })
+    const scope = await this.prisma.library.findUniqueOrThrow({ where: { id: libraryId }, select: { id: true, trusted: true } })
     if (input.isbn) {
       const isbn = normalizeIsbn(input.isbn)
       if (!isbn) {

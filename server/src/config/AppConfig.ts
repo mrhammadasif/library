@@ -21,13 +21,6 @@ export const AppConfigSchema = z.object({
   S3_ACCESS_KEY_ID: z.string().optional(),
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   COVERS_PUBLIC_URL: z.string().url().optional(),
-  /**
-   * Home AI (for libraries the admin allowed): an OpenAI-compatible gateway, by default the home server's OmniRoute,
-   * which can route to Gemini or the local Ollama. No key = Home AI off.
-   */
-  HOME_AI_BASE_URL: z.string().url().default('https://omniroute.home.nitroxis.com/v1'),
-  HOME_AI_API_KEY: z.string().optional(),
-  HOME_AI_MODEL: z.string().default('gemini-3.1-flash-lite'),
   /** Test a library's AI key with a tiny request before saving it (off in the e2e suite unless a test turns it on). */
   AI_KEY_CHECK: z.stringbool().default(true),
   /** Self-hosted SearXNG (JSON format enabled) for web lookups during AI enrichment; unset = off. */
@@ -39,7 +32,7 @@ export const AppConfigSchema = z.object({
   GOOGLE_BOOKS_API_KEY: z.string().optional(),
   /** Server-wide Google Books requests per Pacific day; keep under the key's 1,000/day quota. */
   GOOGLE_BOOKS_DAILY_LIMIT: z.coerce.number().int().min(0).max(1000).default(900),
-  /** Per-library daily allowances (Pacific day); libraries with Home AI allowed are exempt. Spent = graceful fallback. */
+  /** Per-library daily allowances (Pacific day); trusted libraries are exempt. Spent = graceful fallback. */
   LIBRARY_DAILY_GOOGLE_BOOKS: z.coerce.number().int().min(0).default(150),
   LIBRARY_DAILY_WEB_SEARCHES: z.coerce.number().int().min(0).default(50),
   RATE_LIMIT_ENABLED: z.stringbool().default(true),

@@ -57,10 +57,10 @@ describe('per-library daily allowances', () => {
     expect(calls('googleapis')).toBe(3)
   })
 
-  it('exempts libraries the admin trusts with Home AI', async () => {
+  it('exempts libraries the admin marked trusted', async () => {
     const calls = stub()
     const trusted = await createLibrary(t, owner)
-    await t.db.prisma.library.update({ where: { id: trusted }, data: { homeAiAllowed: true } })
+    await t.db.prisma.library.update({ where: { id: trusted }, data: { trusted: true } })
     for (let i = 0; i < 4; i++) {
       expect((await lookup(trusted)).body.sources.googleBooks).toBe(true)
     }

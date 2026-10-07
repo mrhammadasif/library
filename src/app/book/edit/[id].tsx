@@ -11,7 +11,7 @@ import { Header } from '~/components/Header'
 import { Screen } from '~/components/Screen'
 import { useBook, useTags, useUpdateBook } from '~/hooks/Books'
 import { useCurrentLibrary } from '~/library/LibraryProvider'
-import { bookToFields } from '~/utils/BookForm'
+import { bookToFields, withNormalizedIsbn } from '~/utils/BookForm'
 import { hexToColorName } from '~/utils/ColorName'
 import { captureCover } from '~/utils/CoverPhoto'
 import { errorMessage } from '~/utils/Errors'
@@ -47,11 +47,16 @@ function EditForm({ bookId, initial }: { bookId: string, initial: IBookFields })
       setError('A title is required')
       return
     }
+    const ready = withNormalizedIsbn(fields)
+    if (!ready) {
+      setError('That ISBN doesn\'t look right. Fix it or clear it.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
       const coverPath = localCover ? await uploadCover(library.id, bookId, localCover) : fields.coverPath
-      await update.mutateAsync({ libraryId: library.id, id: bookId, fields: { ...fields, coverPath } })
+      await update.mutateAsync({ libraryId: library.id, id: bookId, fields: { ...ready, coverPath } })
       router.back()
     }
     catch (e) {

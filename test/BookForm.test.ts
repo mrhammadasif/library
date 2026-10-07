@@ -59,3 +59,15 @@ describe('fillBlanks', () => {
     })
   })
 })
+
+describe('withNormalizedIsbn', () => {
+  it('stores ISBN-13 (and ISBN-10) from whatever was typed, and refuses a wrong check digit', async () => {
+    const { withNormalizedIsbn } = await import('~/utils/BookForm')
+    const base = { ...emptyFields(), title: 'Dune' }
+    expect(withNormalizedIsbn({ ...base, isbn13: '044117271X'.replace('X', '7') })).toMatchObject({ isbn13: '9780441172719', isbn10: '0441172717' })
+    expect(withNormalizedIsbn({ ...base, isbn13: '9780441172719' })).toMatchObject({ isbn13: '9780441172719', isbn10: '0441172717' })
+    expect(withNormalizedIsbn({ ...base, isbn13: '080442957X' })).toMatchObject({ isbn13: '9780804429573', isbn10: '080442957X' })
+    expect(withNormalizedIsbn({ ...base, isbn13: '9780441172718' })).toBeNull()
+    expect(withNormalizedIsbn({ ...base, isbn13: null })).toMatchObject({ isbn13: null })
+  })
+})

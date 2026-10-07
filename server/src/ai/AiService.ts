@@ -109,7 +109,7 @@ export class AiService {
     })
   }
 
-  /** Which provider suggests tags (null = Home AI if allowed, else off) and which reads cover photos (null = off). */
+  /** Which provider suggests tags and which reads cover photos (null = off). */
   async setUsage(libraryId: string, usage: { enrich: AiProvider | null, vision: AiProvider | null }): Promise<void> {
     const configured = await this.prisma.libraryAiProvider.findMany({ where: { libraryId } })
     if (usage.enrich && !configured.some(p => p.provider === usage.enrich)) {
@@ -122,7 +122,7 @@ export class AiService {
   }
 
   /**
-   * Tag/category/description suggestions: the library's enrich provider, else Home AI when the admin allowed it.
+   * Tag/category/description suggestions with the library's own AI key (people bring their own; the server has none).
    * When the book databases left gaps (no ISBN, publisher, year…), the AI also reads web search results (SearXNG) and
    * fills them; an ISBN is only accepted if it was printed in one of those results.
    */
@@ -131,24 +131,38 @@ export class AiService {
       requirePermission(m, 'books.edit')
     }
     const library = await this.library(m.libraryId)
-    const home = library.homeAiAllowed ? this.homeAi() : null
-    if (!library.enrichProvider && !home) {
-      throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
+    if (!library.enrichProvider) {
+      throw new DomainError(409, 'ai_not_configured', 'Add an AI key in Smart helpers to get tag suggestions')
     }
+    await this.takeAiRequest(library)
     // Web searches go out through the home connection, so they come from the library's daily allowance.
     const web = this.config.SEARXNG_URL && needsWebSearch(draft) && await this.allowance.take(library, 'web_search')
       ? relevantResults(draft, await searchWeb(this.config.SEARXNG_URL, bookQuery(draft), { apiKey: this.config.SEARXNG_API_KEY }))
       : []
     const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 60_000 }
-    const config = library.enrichProvider ? await this.providerConfig(m.libraryId, library.enrichProvider) : home!
-    const raw = await chatJson(config, request)
-    return { enrichment: parseEnrichment(raw, web), provider: library.enrichProvider ?? 'home' }
+    const raw = await chatJson(await this.providerConfig(m.libraryId, library.enrichProvider), request)
+    return { enrichment: parseEnrichment(raw, web), provider: library.enrichProvider as string }
   }
 
-  /** The server's Home AI gateway (OmniRoute by default), or null when no key is configured. */
-  private homeAi(): IAiConfig | null {
-    const { HOME_AI_API_KEY: apiKey, HOME_AI_BASE_URL: baseUrl, HOME_AI_MODEL: model } = this.config
-    return apiKey ? { provider: 'openai_compatible', baseUrl, apiKey, model } : null
+  /**
+   * Counts every AI request against the library's own daily limit (always counted, so the settings screen can show
+   * today's use; enforced only when a limit is set).
+   */
+  private async takeAiRequest(library: { id: string, aiDailyLimit: number | null }): Promise<void> {
+    // "No limit" still counts, so it needs a number Postgres' integer column can compare with.
+    const limit = library.aiDailyLimit ?? 2_147_483_647
+    if (!await this.allowance.takeUpTo(library.id, 'ai', limit)) {
+      throw new DomainError(429, 'ai_daily_limit', `This library's AI limit of ${limit} a day is used up. Try again tomorrow, or raise it in Smart helpers.`)
+    }
+  }
+
+  async aiLimit(libraryId: string) {
+    const library = await this.library(libraryId)
+    return { dailyLimit: library.aiDailyLimit, usedToday: await this.allowance.usedToday(libraryId, 'ai') }
+  }
+
+  async setAiLimit(libraryId: string, dailyLimit: number | null): Promise<void> {
+    await this.prisma.library.update({ where: { id: libraryId }, data: { aiDailyLimit: dailyLimit } })
   }
 
   /** Reads a cover photo with the library's vision provider, then finds matching editions online. */
@@ -157,6 +171,7 @@ export class AiService {
     if (!library.visionProvider) {
       throw new DomainError(409, 'ai_not_configured', 'Cover photos need an OpenAI or Gemini key in AI settings')
     }
+    await this.takeAiRequest(library)
     const config = await this.providerConfig(libraryId, library.visionProvider)
     const identification = parseIdentification(await chatJson(config, {
       system: IDENTIFY_SYSTEM,

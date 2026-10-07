@@ -205,8 +205,10 @@ model Library {
   createdBy      String?     @map("created_by") @db.Uuid
   enrichProvider AiProvider? @map("enrich_provider")
   visionProvider AiProvider? @map("vision_provider")
-  /// Home AI (OmniRoute) allowed for this library; only the server admin can set it. Also exempts it from daily allowances.
-  homeAiAllowed  Boolean     @default(false) @map("home_ai_allowed")
+  /// Trusted by the server admin (only they can set it): no per-library daily allowances.
+  trusted        Boolean     @default(false)
+  /// The library's own cap on AI requests per Pacific day (its own key, its own bill); null = no limit.
+  aiDailyLimit   Int?        @map("ai_daily_limit")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 

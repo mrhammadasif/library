@@ -1,4 +1,5 @@
-# Cleanup: deletes the current (test) library from Settings. Starts on the Home tab.
+# Cleanup: deletes the current (test) library from Settings → the "Delete library" page. Starts on the Home tab.
+# Uses the page's copyable name: copy it, paste it into the confirm box, then delete.
 appId: com.nitroxis.library
 ---
 - tapOn: "Settings"
@@ -6,7 +7,19 @@ appId: com.nitroxis.library
     element: "Delete this library"
     direction: DOWN
 - tapOn: "Delete this library"
-- tapOn: "Delete library"
+- extendedWaitUntil:
+    visible: "This can't be undone"
+    timeout: 10000
+- copyTextFrom:
+    id: "delete-library-name"
+- tapOn:
+    id: "delete-library-confirm"
+- pasteText
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Delete this library forever"
+    direction: DOWN
+- tapOn: "Delete this library forever"
 - extendedWaitUntil:
     visible: "Welcome"
     timeout: 15000

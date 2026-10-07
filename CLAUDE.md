@@ -52,23 +52,27 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   - Delete-user is blocked for the last owner of a shared library; solo libraries are deleted; loans keep the borrower's name.
   - Gotcha: sending the OTP on sign-up needs `emailVerification.sendOnSignUp` when `overrideDefaultEmailVerification` is set.
   - Passkeys are phase 2; the table already exists.
-- AI: per-library OpenAI/Gemini/self-hosted keys sealed with AES-256-GCM (`AI_KEYS_KEY`, never returned). Enrichment uses the
-  library's provider, else **Home AI** when the server admin (`ADMIN_EMAILS`) allowed it for that library. Home AI is the
-  home server's **OmniRoute** gateway (OpenAI-compatible, `HOME_AI_BASE_URL` = `https://omniroute.home.nitroxis.com/v1`,
-  `HOME_AI_API_KEY`, model `HOME_AI_MODEL` = `gemini-3.1-flash-lite`): about 6–25 s per book with web results. Direct
-  Ollama was dropped (2026-10-07): on the CPU-only i3 it took 90 s (0.8B) to 400–580 s (4B) per enrichment. OmniRoute can
-  still route to Ollama if wanted. Cover recognition needs a vision provider (OpenAI/Gemini).
+- AI: **only the library's own key** (OpenAI / Gemini / self-hosted OpenAI-compatible), added in Smart helpers, sealed
+  with AES-256-GCM (`AI_KEYS_KEY`, never returned) and tested with a tiny request on save. The server has no AI key of
+  its own: Home AI (Ollama, then OmniRoute) was removed on 2026-10-07 before going public. Each library chooses a daily
+  cap on its AI requests (`libraries.ai_daily_limit`, null = no limit; `GET/PUT /ai/limit`). Every enrich/identify
+  request is counted in `library_daily_usage` (kind `ai`), and over the cap → 429 `ai_daily_limit`.
+  Cover recognition needs a vision-capable provider.
 - Google Books: every request goes through `GoogleBooksBudget` (`books-budget/`): a Postgres counter per **Pacific** day
   (Google's quota day), taken atomically (`INSERT … ON CONFLICT DO UPDATE … WHERE count < limit`), default 900/day
   (`GOOGLE_BOOKS_DAILY_LIMIT`, under the key's 1,000). When spent, or with no key, lookups use Open Library only.
   Shared fetchers take `IGoogleBooks { apiKey, take }` or null. Tags/categories are also derived from subject headings
   (`suggestTags`, `categoryPath`, `subjectCategories` in shared/metadata.ts) so they fill in without AI.
-- **Public use (bring your own key):** strangers never touch the owner's keys. Home AI is off unless the admin enables it
-  per library; everyone else adds their own Gemini/OpenAI key in Smart helpers (tested with a tiny request on save:
+- **Public use (bring your own key):** strangers never touch the owner's keys. Everyone adds their own Gemini/OpenAI key in Smart helpers (tested with a tiny request on save:
   `AI_KEY_CHECK`, mapped to `invalid_key` / `invalid_model` / `provider_unreachable`; a new key is switched on
   automatically). Shared services have per-library daily allowances in `library_daily_usage` (`LibraryAllowance`,
   Pacific day, atomic like the Google budget): `LIBRARY_DAILY_GOOGLE_BOOKS` (150) and `LIBRARY_DAILY_WEB_SEARCHES` (50).
-  Home AI libraries are exempt. When an allowance is spent, lookups use Open Library only and AI runs without web results.
+  Libraries the admin marks **trusted** (`libraries.trusted`, `PUT /libraries/:id/trusted`, admin-only switch in
+  Settings) are exempt. When an allowance is spent, lookups use Open Library only and AI runs without web results.
+- Deleting a library: a dedicated page (`delete-library.tsx`) lists what's lost (with counts) and needs the exact
+  name typed back. The server checks it too (`DELETE /libraries/:id` body `{ confirmName }` → 400 `name_mismatch`).
+- Devices: the app sends `User-Agent: HomeLibrary/<version> (<maker model>; Android <n>)` (`USER_AGENT` in
+  `src/api/Env.ts`) so sessions are recognisable; the current session is matched by id; "Sign out all other devices".
 - Web search during AI enrichment: when the draft still has gaps (`needsWebSearch`), `AiService.enrich` queries the
   home **SearXNG** (`SEARXNG_URL` = `https://searxng.home.nitroxis.com`, locked: `SEARXNG_API_KEY` sent as `X-API-Key`;
   it has no internal route to the API) and keeps only the ≤3 results whose text matches the title (`relevantResults`),
@@ -105,7 +109,7 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - Prisma: edit `server/prisma/schema.prisma`, then `npx prisma migrate dev --create-only` against a dev DB and hand-add any
   CHECKs/extensions. `npx prisma generate` writes `server/src/generated/prisma` (gitignored).
 - Deploy: a Coolify Docker Compose resource "library-api" with base dir `/server` and compose file `/docker-compose.coolify.yml`
-  (api only; default network: Home AI and SearXNG are reached via their public URLs + keys). Postgres 17 is the shared Coolify database "nitroxis-pg" (project "common",
+  (api only; default network: SearXNG is reached via its public URL + key). Postgres 17 is the shared Coolify database "nitroxis-pg" (project "common",
   container `mgpp9dnk3gikz7hdfhazv7ev`; database + non-superuser role `library`, `pg_trgm` pre-created by the superuser),
   reached over the `coolify` network ("Connect To Predefined Network") via `DATABASE_URL`. Coolify app uuid `bhidfqpixbpmtniphkxm62ln`, domain `https://api.library.home.nitroxis.com`. The container runs `prisma migrate deploy` on start.
 - Device e2e (Maestro, `.maestro/`): boot an emulator, build the release APK (`cd android && ./gradlew assembleRelease`;

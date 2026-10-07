@@ -2,6 +2,7 @@ import type { IBookFields } from '~/models/IBook'
 import { View } from 'react-native'
 import { Field } from '~/components/Field'
 import { TagInput } from '~/components/TagInput'
+import { cleanIsbn, normalizeIsbn } from '~shared/isbn'
 
 type OnChange = <K extends keyof IBookFields>(key: K, value: IBookFields[K]) => void
 
@@ -10,19 +11,40 @@ function toNumber(text: string): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-/** Title, subtitle and authors: what most people ever need to fix. */
-export function BookBasicsForm({ fields, onChange, titleError }: { fields: IBookFields, onChange: OnChange, titleError?: string | null }) {
+/** ISBN-13 or ISBN-10 (keeps the X); flags a full-length number whose check digit is wrong. */
+function IsbnField({ fields, onChange, label, hint }: { fields: IBookFields, onChange: OnChange, label: string, hint?: string }) {
+  const value = fields.isbn13 ?? ''
+  const wrong = (value.length === 10 || value.length === 13) && !normalizeIsbn(value)
+  return (
+    <Field
+      testID="book-isbn"
+      label={label}
+      value={value}
+      onChangeText={v => onChange('isbn13', cleanIsbn(v) || null)}
+      keyboardType="default"
+      autoCapitalize="characters"
+      autoCorrect={false}
+      maxLength={17}
+      error={wrong ? 'That ISBN doesn\'t look right. Check the digits.' : undefined}
+      hint={wrong ? undefined : hint}
+    />
+  )
+}
+
+/** Title, subtitle and authors: what most people ever need to fix. `isbn` adds the ISBN right here (add-book form). */
+export function BookBasicsForm({ fields, onChange, titleError, isbn = false }: { fields: IBookFields, onChange: OnChange, titleError?: string | null, isbn?: boolean }) {
   return (
     <View className="gap-4">
       <Field testID="book-title" label="Title" value={fields.title} onChangeText={v => onChange('title', v)} error={titleError} placeholder="What's the book called?" />
       <TagInput label="Author" values={fields.authors} onChange={v => onChange('authors', v)} placeholder="Who wrote it?" />
       <Field label="Subtitle (optional)" value={fields.subtitle ?? ''} onChangeText={v => onChange('subtitle', v)} />
+      {isbn && <IsbnField fields={fields} onChange={onChange} label="ISBN (optional)" hint="The number by the barcode on the back. Type it to find the book online." />}
     </View>
   )
 }
 
 /** Everything else, tucked behind "More details". */
-export function BookDetailsForm({ fields, onChange, tagSuggestions }: { fields: IBookFields, onChange: OnChange, tagSuggestions: string[] }) {
+export function BookDetailsForm({ fields, onChange, tagSuggestions, isbn = true }: { fields: IBookFields, onChange: OnChange, tagSuggestions: string[], isbn?: boolean }) {
   return (
     <View className="gap-4">
       <TagInput
@@ -36,9 +58,11 @@ export function BookDetailsForm({ fields, onChange, tagSuggestions }: { fields: 
       <TagInput label="Categories" values={fields.categories} onChange={v => onChange('categories', v)} placeholder="e.g. History" />
       <Field label="What's it about?" value={fields.description ?? ''} onChangeText={v => onChange('description', v)} multiline testID="book-description-input" />
       <View className="flex-row gap-3">
-        <View className="flex-1">
-          <Field label="ISBN" value={fields.isbn13 ?? ''} onChangeText={v => onChange('isbn13', v.replace(/\D/g, ''))} keyboardType="number-pad" maxLength={13} />
-        </View>
+        {isbn && (
+          <View className="flex-1">
+            <IsbnField fields={fields} onChange={onChange} label="ISBN" />
+          </View>
+        )}
         <View className="flex-1">
           <Field label="Year" value={fields.publishedYear?.toString() ?? ''} onChangeText={v => onChange('publishedYear', toNumber(v))} keyboardType="number-pad" maxLength={4} />
         </View>

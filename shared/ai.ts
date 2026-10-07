@@ -1,5 +1,5 @@
 // AI providers through one OpenAI-compatible Chat Completions adapter: OpenAI, Gemini (its /openai endpoint) and
-// any OpenAI-compatible gateway (e.g. the home server's OmniRoute, which also serves Home AI). Prompt builders and response
+// any OpenAI-compatible gateway (e.g. a self-hosted router). Prompt builders and response
 // parsing are pure and unit-tested.
 import type { IBookDraft } from './metadata.ts'
 import type { IWebResult } from './webSearch.ts'

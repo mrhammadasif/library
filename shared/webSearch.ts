@@ -13,7 +13,7 @@ interface ISearxngResponse {
   results?: { title?: string, url?: string, content?: string }[]
 }
 
-// Small on purpose: Home AI is a CPU-only model and every prompt token costs time (search prompts never hit its cache).
+// Small on purpose: every prompt token costs the library's own AI key time and money.
 const MAX_RESULTS = 3
 const MAX_SNIPPET = 200
 const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'from', 'book', 'books', 'edition'])

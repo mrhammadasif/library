@@ -3,7 +3,7 @@ import type { IAppConfig } from '../config/AppConfig'
 import { Body, Controller, Delete, Get, HttpCode, Inject, Param, ParseUUIDPipe, Patch, Post, Put } from '@nestjs/common'
 import { Session } from '@thallesp/nestjs-better-auth'
 import { createZodDto } from 'nestjs-zod'
-import { HomeAiInput, LibraryNameInput } from '../../../shared/contracts/Libraries'
+import { DeleteLibraryInput, LibraryNameInput, TrustedInput } from '../../../shared/contracts/Libraries'
 import type { IMembership } from '../auth/Access'
 import { Membership, RequireLibrary, UserId } from '../auth/Access'
 import { DomainError } from '../common/DomainError'
@@ -11,7 +11,8 @@ import { APP_CONFIG } from '../config/AppConfig'
 import { LibrariesService } from './LibrariesService'
 
 class LibraryNameDto extends createZodDto(LibraryNameInput) {}
-class HomeAiDto extends createZodDto(HomeAiInput) {}
+class TrustedDto extends createZodDto(TrustedInput) {}
+class DeleteLibraryDto extends createZodDto(DeleteLibraryInput) {}
 
 @Controller('libraries')
 export class LibrariesController {
@@ -40,18 +41,18 @@ export class LibrariesController {
   @Delete(':libraryId')
   @RequireLibrary()
   @HttpCode(204)
-  remove(@Membership() membership: IMembership) {
-    return this.libraries.remove(membership)
+  remove(@Membership() membership: IMembership, @Body() body: DeleteLibraryDto) {
+    return this.libraries.remove(membership, body.confirmName)
   }
 
-  /** Server admin only: lets a library use the server's Home AI (OmniRoute). Needn't be a member. */
-  @Put(':libraryId/home-ai')
+  /** Server admin only: marks a library trusted (no daily allowances). Needn't be a member. */
+  @Put(':libraryId/trusted')
   @HttpCode(204)
-  async homeAi(@Session() session: UserSession, @Param('libraryId', ParseUUIDPipe) libraryId: string, @Body() body: HomeAiDto) {
+  async trusted(@Session() session: UserSession, @Param('libraryId', ParseUUIDPipe) libraryId: string, @Body() body: TrustedDto) {
     const isAdmin = session.user.emailVerified && this.config.ADMIN_EMAILS.includes(session.user.email.toLowerCase())
     if (!isAdmin) {
       throw new DomainError(403, 'admin_only', 'Only the server admin can change this')
     }
-    await this.libraries.setHomeAi(libraryId, body.allowed)
+    await this.libraries.setTrusted(libraryId, body.trusted)
   }
 }

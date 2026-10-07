@@ -8,7 +8,7 @@ import { APP_CONFIG } from '../config/AppConfig'
 export class MeController {
   constructor(@Inject(APP_CONFIG) private readonly config: IAppConfig) {}
 
-  /** The signed-in user, plus whether they're the server admin (allowed to switch Home AI on for libraries). */
+  /** The signed-in user, plus whether they're the server admin (allowed to mark libraries trusted). */
   @Get()
   me(@Session() session: UserSession) {
     const { id, name, email, emailVerified, image } = session.user

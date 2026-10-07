@@ -36,10 +36,10 @@ export function useRenameLibrary() {
 }
 
 export function useDeleteLibrary() {
-  return useMembershipMutation((libraryId: string) => api.delete(`/libraries/${libraryId}`))
+  return useMembershipMutation(({ libraryId, confirmName }: { libraryId: string, confirmName: string }) => api.delete(`/libraries/${libraryId}`, { confirmName }))
 }
 
 /** Server admin only. */
-export function useSetHomeAi() {
-  return useMembershipMutation(({ libraryId, allowed }: { libraryId: string, allowed: boolean }) => api.put(`/libraries/${libraryId}/home-ai`, { allowed }))
+export function useSetTrusted() {
+  return useMembershipMutation(({ libraryId, trusted }: { libraryId: string, trusted: boolean }) => api.put(`/libraries/${libraryId}/trusted`, { trusted }))
 }
