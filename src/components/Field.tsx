@@ -14,7 +14,7 @@ interface IFieldProps extends Omit<TextInputProps, 'value' | 'onChangeText'> {
 export function Field({ label, value, onChangeText, hint, error, multiline, ...rest }: IFieldProps) {
   return (
     <View className="gap-1.5">
-      <Text className="px-1 text-base font-semibold text-muted">{label}</Text>
+      {!!label && <Text className="px-1 text-base font-semibold text-muted">{label}</Text>}
       <TextInput
         value={value}
         onChangeText={onChangeText}

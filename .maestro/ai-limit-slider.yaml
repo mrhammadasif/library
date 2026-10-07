@@ -1,0 +1,33 @@
+# Smart helpers → Daily limit: switch on, slide, type an exact number. Needs a library with a working AI provider
+# (set up through the API by the caller, since saving a key tests it), so this flow does no cleanup itself.
+appId: com.nitroxis.library
+---
+- launchApp:
+    clearState: true
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Hi .*"
+    timeout: 20000
+- tapOn: "Settings"
+- tapOn: "Smart helpers.*"
+- scrollUntilVisible:
+    element: "Limit AI requests per day"
+    direction: DOWN
+- takeScreenshot: limit-01-off
+- tapOn:
+    text: "Limit AI requests per day"
+    index: 1
+- extendedWaitUntil:
+    visible: ".*Used today: 0 of 50.*"
+    timeout: 10000
+- takeScreenshot: limit-02-on
+- tapOn:
+    id: "ai-daily-limit-input"
+- eraseText: 5
+- inputText: "750"
+# Enter (the keyboard's ✓) closes the keyboard and saves; no hideKeyboard here, it would press Back.
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: ".*Used today: 0 of 750.*"
+    timeout: 10000
+- takeScreenshot: limit-03-typed

@@ -11,9 +11,10 @@ tags:
 - extendedWaitUntil:
     visible: "Welcome|Hi .*"
     timeout: 20000
+# Leftover from an aborted run: only ever a "Maestro …" test library, never anything else on the account.
 - runFlow:
     when:
-      notVisible: "Welcome"
+      visible: "Maestro .*Library.*"
     file: flows/delete-library.yaml
 - tapOn:
     id: "welcome-library-name"

@@ -1,5 +1,6 @@
 import type { AiProvider, IAiProviderConfig } from '~/models/ILibrary'
 import { useState } from 'react'
+import Slider from '@react-native-community/slider'
 import { Linking, Switch, Text, View } from 'react-native'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
@@ -32,8 +33,94 @@ const PROVIDERS: IProviderInfo[] = [
 const SELF_HOSTED: IProviderInfo = { key: 'openai_compatible', name: 'Self-hosted', defaultModel: '', blurb: 'Any OpenAI-compatible endpoint over HTTPS (e.g. your own gateway).' }
 const ALL_PROVIDERS = [...PROVIDERS, SELF_HOSTED]
 
-/** Daily caps offered for the library's own key (null = no limit). */
-const LIMITS: (number | null)[] = [null, 20, 50, 100, 200]
+// The slider covers everyday amounts; the number field goes up to the server's maximum.
+const SLIDER_MAX = 500
+const LIMIT_MAX = 10_000
+const DEFAULT_LIMIT = 50
+
+function clampLimit(n: number): number {
+  return Math.min(LIMIT_MAX, Math.max(1, Math.round(n)))
+}
+
+/**
+ * The library's own daily cap on AI requests: off = no limit; on = a slider for everyday amounts plus a number field for
+ * exact (or larger) values. Saves when the slider is released or the field is left.
+ */
+function DailyLimitCard({ saved, usedToday, saving, error, onSave }: {
+  saved: number | null
+  usedToday: number
+  saving: boolean
+  error: unknown
+  onSave: (dailyLimit: number | null) => void
+}) {
+  const [value, setValue] = useState(saved ?? DEFAULT_LIMIT)
+  const [text, setText] = useState(String(saved ?? DEFAULT_LIMIT))
+  const on = saved !== null
+
+  function commit(n: number) {
+    const next = clampLimit(n)
+    setValue(next)
+    setText(String(next))
+    if (next !== saved) {
+      onSave(next)
+    }
+  }
+
+  return (
+    <Card className="gap-4 py-4">
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1">
+          <Text className="text-base font-bold text-ink">Limit AI requests per day</Text>
+          <Text className="text-sm text-muted">AI uses your own key, so you decide. When the limit is reached, books still save; AI waits until tomorrow.</Text>
+        </View>
+        <Switch
+          value={on}
+          disabled={saving}
+          onValueChange={next => onSave(next ? clampLimit(value) : null)}
+          trackColor={{ true: Colors.primary }}
+          accessibilityLabel="Limit AI requests per day"
+        />
+      </View>
+      {on && (
+        <View className="gap-2">
+          <View className="flex-row items-center gap-3">
+            <Slider
+              style={{ flex: 1, height: 40 }}
+              minimumValue={1}
+              maximumValue={SLIDER_MAX}
+              step={1}
+              value={Math.min(value, SLIDER_MAX)}
+              onValueChange={(n) => {
+                setValue(n)
+                setText(String(n))
+              }}
+              onSlidingComplete={commit}
+              minimumTrackTintColor={Colors.primary}
+              maximumTrackTintColor={Colors.line}
+              thumbTintColor={Colors.primary}
+              accessibilityLabel="AI requests per day"
+            />
+            <View className="w-24">
+              <Field
+                label=""
+                value={text}
+                onChangeText={t => setText(t.replace(/\D/g, ''))}
+                onEndEditing={() => commit(Number(text) || 1)}
+                keyboardType="number-pad"
+                maxLength={5}
+                testID="ai-daily-limit-input"
+                accessibilityLabel="AI requests per day"
+              />
+            </View>
+          </View>
+          <Text className="text-sm text-muted">{`${value} a day · up to ${LIMIT_MAX.toLocaleString()} by typing`}</Text>
+        </View>
+      )}
+      <Text className="text-sm font-semibold text-ink">{`Used today: ${usedToday}${on ? ` of ${saved}` : ''}`}</Text>
+      {!!error && <Text className="text-sm text-negative">{errorMessage(error)}</Text>}
+    </Card>
+  )
+}
 
 function ProviderForm({ libraryId, provider, existing, onSaved }: {
   libraryId: string
@@ -192,30 +279,17 @@ export default function AiSettingsScreen() {
               {usage.error && <Text className="text-sm text-negative">{errorMessage(usage.error)}</Text>}
             </Card>
           </View>
-          {configured.length > 0 && (
+          {configured.length > 0 && limit.data && (
             <View className="gap-3">
               <SectionHeader title="Daily limit" />
-              <Card className="gap-3 py-4">
-                <Text className="text-base text-muted">
-                  AI requests use your own key, so you choose how many a day this library may make. When they're used up, books still save; AI just waits until tomorrow.
-                </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {LIMITS.map(n => (
-                    <Chip
-                      key={n ?? 'none'}
-                      label={n === null ? 'No limit' : `${n} a day`}
-                      selected={(limit.data?.dailyLimit ?? null) === n}
-                      onPress={() => setLimit.mutate({ libraryId: library.id, dailyLimit: n })}
-                    />
-                  ))}
-                </View>
-                {limit.data && (
-                  <Text className="text-sm font-semibold text-ink">
-                    {`Used today: ${limit.data.usedToday}${limit.data.dailyLimit ? ` of ${limit.data.dailyLimit}` : ''}`}
-                  </Text>
-                )}
-                {setLimit.error && <Text className="text-sm text-negative">{errorMessage(setLimit.error)}</Text>}
-              </Card>
+              <DailyLimitCard
+                key={limit.data.dailyLimit ?? 'none'}
+                saved={limit.data.dailyLimit}
+                usedToday={limit.data.usedToday}
+                saving={setLimit.isPending}
+                error={setLimit.error}
+                onSave={dailyLimit => setLimit.mutate({ libraryId: library.id, dailyLimit })}
+              />
             </View>
           )}
           <View className="gap-3">
