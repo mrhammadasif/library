@@ -29,7 +29,7 @@ describe('metadata', () => {
 
   it('parses Google Books volumes, stripping HTML and splitting category paths', () => {
     expect(gb.description).toBe('Set on the desert planet Arrakis , Dune is the story of Paul Atreides.')
-    expect(gb.categories).toEqual(['Fiction', 'Science Fiction'])
+    expect(gb.categories).toEqual(['Science Fiction', 'Fiction'])
     expect(gb.subtitle).toBeNull()
     expect(gb.pages).toBeNull()
     expect(gb.coverUrl).toBe('https://books.google.com/books/content?id=x&printsec=frontcover&img=1&zoom=1&source=gbs_api')
@@ -46,7 +46,7 @@ describe('metadata', () => {
     expect(merged.publisher).toBe('Ace Books')
     expect(merged.pages).toBe(528)
     expect(merged.description).toContain('Arrakis')
-    expect(merged.categories).toEqual(['Fiction', 'Science Fiction'])
+    expect(merged.categories).toEqual(['Science Fiction', 'Fiction'])
     expect(merged.coverUrl).toBe(ol.coverUrl)
   })
 

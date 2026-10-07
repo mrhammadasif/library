@@ -112,7 +112,8 @@ export function parseOpenLibraryData(data: IOpenLibraryData | undefined): IBookD
     pages: data.number_of_pages ?? null,
     language: toLanguageCode(data.languages?.[0]?.key),
     description: clean(notes),
-    categories: uniq((data.subjects ?? []).map(s => s.name).filter(s => s.length <= 40), 6),
+    categories: subjectCategories((data.subjects ?? []).map(s => s.name)),
+    tags: suggestTags((data.subjects ?? []).map(s => s.name)),
     coverUrl: data.cover?.large ?? data.cover?.medium ?? null,
   }
 }
@@ -147,7 +148,8 @@ export function parseOpenLibraryDoc(doc: IOpenLibraryDoc): IBookDraft | null {
     publishedYear: doc.first_publish_year ?? null,
     pages: doc.number_of_pages_median ?? null,
     language: toLanguageCode(doc.language?.[0]),
-    categories: uniq((doc.subject ?? []).filter(s => s.length <= 40), 6),
+    categories: subjectCategories(doc.subject ?? []),
+    tags: suggestTags(doc.subject ?? []),
     coverUrl: doc.cover_i ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg` : null,
   }
 }
@@ -196,10 +198,79 @@ export function parseGoogleVolume(volume: IGoogleVolume | undefined): IBookDraft
     pages: info.pageCount || null,
     language: toLanguageCode(info.language),
     description: clean(info.description),
-    // "Fiction / Science Fiction / General" → "Science Fiction"
-    categories: uniq((info.categories ?? []).flatMap(c => c.split('/').map(s => s.trim()).filter(s => s && s !== 'General')), 6),
+    categories: uniq((info.categories ?? []).flatMap(categoryPath), 6),
     coverUrl: upgradeGoogleCover(info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail),
+    tags: suggestTags(info.categories ?? []),
   }
+}
+
+// ─── Categories & tags from subject headings ────────────────────────────────
+
+const MAX_TAGS = 8
+
+/** "Juvenile Fiction / Religious / Islamic" → ["Islamic", "Juvenile Fiction"]: the specific genre first, then the shelf section. */
+export function categoryPath(path: string): string[] {
+  const parts = path.split('/').map(p => p.trim()).filter(p => p && !/^general$/i.test(p))
+  if (parts.length <= 1) {
+    return parts
+  }
+  return [parts[parts.length - 1], parts[0]]
+}
+
+/** Open Library subject headings → a few clean, genre-like categories ("Science fiction", not "Fiction, science fiction, general"). */
+export function subjectCategories(subjects: string[]): string[] {
+  return uniq(subjects
+    .filter(s => s.length <= 30 && !/[:=,(]/.test(s))
+    .map(s => s.replace(/-/g, ' '))
+    .filter(s => s.split(' ').length <= 3 && !NOISE.has(s.toLowerCase())), 4)
+}
+
+// Subject words that say nothing useful on a home shelf.
+const NOISE = new Set(['general', 'fiction', 'nonfiction', 'non-fiction', 'literature', 'english', 'language', 'books', 'reading',
+  'materials', 'readers', 'study and teaching', 'new york times reviewed', 'american literature', 'english literature', 'history and criticism', 'accessible book', 'protected daisy', 'in library',
+  'large type books', 'translations into english', 'textbooks', 'other', 'miscellanea', 'religious', 'religion'])
+
+// Common subject wordings → the tag a family would actually search for.
+const SYNONYMS: [RegExp, string][] = [
+  [/juvenile|children'?s?|\bkids?\b|picture books/i, 'children'],
+  [/\bislam|\bmuslim|qur'?an|koran|hadith|seerah|sirah/i, 'islamic'],
+  [/\bstor(y|ies)\b|tales/i, 'stories'],
+  [/\bbiograph/i, 'biography'],
+  [/science fiction|sci-fi/i, 'science fiction'],
+  [/fantasy/i, 'fantasy'],
+  [/\bhistor(y|ical)\b/i, 'history'],
+  [/\bpoetry|poems\b/i, 'poetry'],
+  [/cook(ing|ery)|recipes/i, 'cooking'],
+]
+
+/**
+ * Turns subject headings ("Muhammad, Prophet, -632", "Juvenile Fiction / Religious / Islamic", "Children's stories")
+ * into short lowercase search tags (muhammad, children, islamic, stories). Deterministic, so it works without AI.
+ */
+export function suggestTags(subjects: string[]): string[] {
+  const tags: string[] = []
+  const add = (tag: string) => {
+    const t = tag.toLowerCase().replace(/-/g, ' ').replace(/[^\p{L}\p{N}' ]/gu, '').replace(/\s+/g, ' ').trim()
+    if (t.length >= 3 && t.length <= 24 && !NOISE.has(t) && !tags.includes(t)) {
+      tags.push(t)
+    }
+  }
+  // Open Library mixes in machine tags like "award:hugo_award=1966" or "nyt:hardcover-fiction=2008-01-01".
+  for (const subject of subjects.filter(s => !/[:=]/.test(s))) {
+    for (const [pattern, tag] of SYNONYMS) {
+      if (pattern.test(subject)) {
+        add(tag)
+      }
+    }
+    // "Muhammad, Prophet, -632" → "muhammad"; "Prophets -- Juvenile literature" → "prophets"
+    for (const piece of subject.split(/\s*(?:\/|--|—|;|\()\s*/)) {
+      const head = piece.split(',')[0].replace(/\)$/, '').trim()
+      if (head.split(' ').length <= 2 && !SYNONYMS.some(([pattern]) => pattern.test(head))) {
+        add(head)
+      }
+    }
+  }
+  return tags.slice(0, MAX_TAGS)
 }
 
 // ─── Merge ──────────────────────────────────────────────────────────────────
@@ -235,7 +306,7 @@ export function mergeDrafts(openLibrary: IBookDraft | null, google: IBookDraft |
     language: first('language', googleFirst),
     description: first('description', googleFirst),
     categories: first('categories', googleFirst),
-    tags: [],
+    tags: uniq([...(google?.tags ?? []), ...(openLibrary?.tags ?? [])], MAX_TAGS),
     coverUrl: first('coverUrl'),
   }
 }
@@ -247,6 +318,8 @@ const TIMEOUT_MS = 8000
 async function getJson<T>(url: string): Promise<T | null> {
   const response = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { 'User-Agent': 'HomeLibrary/1.0' } })
   if (!response.ok) {
+    // e.g. Google Books 429 "Queries per day" without an API key: worth seeing in the server logs.
+    console.warn(`Book lookup ${new URL(url).host} returned ${response.status}`)
     return null
   }
   return await response.json() as T

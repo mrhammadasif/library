@@ -95,3 +95,28 @@ export function applyEnrichment(fields: IBookFields, enrichment: IEnrichment, to
 export function splitList(text: string): string[] {
   return text.split(/[,;\n]/).map(s => s.trim()).filter(Boolean)
 }
+
+/** Fills a chosen search result's empty fields from the fuller per-ISBN record; tags/categories are unioned. */
+export function fillBlanks(base: IBookDraft, extra: IBookDraft): IBookDraft {
+  const pick = <K extends keyof IBookDraft>(key: K): IBookDraft[K] => {
+    const value = base[key]
+    const empty = value === null || value === '' || (Array.isArray(value) && value.length === 0)
+    return empty ? extra[key] : value
+  }
+  const union = (a: string[], b: string[], limit: number) => [...a, ...b.filter(v => !a.some(x => x.toLowerCase() === v.toLowerCase()))].slice(0, limit)
+  return {
+    isbn13: pick('isbn13'),
+    isbn10: pick('isbn10'),
+    title: pick('title'),
+    subtitle: pick('subtitle'),
+    authors: pick('authors'),
+    publisher: pick('publisher'),
+    publishedYear: pick('publishedYear'),
+    pages: pick('pages'),
+    language: pick('language'),
+    description: pick('description'),
+    categories: union(base.categories, extra.categories, 6),
+    tags: union(base.tags, extra.tags, 10),
+    coverUrl: pick('coverUrl'),
+  }
+}

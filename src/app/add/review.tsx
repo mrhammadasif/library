@@ -22,7 +22,7 @@ import { useAddBook, useTags } from '~/hooks/Books'
 import { enrichDraft, lookupIsbn, lookupText } from '~/hooks/Lookup'
 import { shelfLabels, useRacks } from '~/hooks/Shelves'
 import { useCurrentLibrary } from '~/library/LibraryProvider'
-import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft } from '~/utils/BookForm'
+import { applyEnrichment, draftToFields, emptyFields, fieldsToDraft, fillBlanks } from '~/utils/BookForm'
 import { hexToColorName } from '~/utils/ColorName'
 import { captureCover } from '~/utils/CoverPhoto'
 import { takePendingDraft } from '~/utils/DraftStore'
@@ -70,7 +70,7 @@ export default function ReviewScreen() {
   useEffect(() => {
     const pending = params.pending ? takePendingDraft() : null
     if (pending) {
-      applyDraft(pending.draft)
+      chooseCandidate(pending.draft)
       if (pending.photoUri) {
         setCover(pending.photoUri)
       }
@@ -99,8 +99,30 @@ export default function ReviewScreen() {
     enrich(next)
   }
 
+  /**
+   * A result from "Find it online" or a cover photo: search results are thin, so when it has an ISBN fetch the full
+   * per-ISBN record (both book sources) and fill the blanks before asking AI for the rest.
+   */
+  async function chooseCandidate(draft: IBookDraft) {
+    setFields(draftToFields(draft))
+    let full = draft
+    if (draft.isbn13) {
+      setLookup({ loading: true, result: null, error: null })
+      try {
+        const result = await lookupIsbn(library.id, draft.isbn13)
+        full = result.draft ? fillBlanks(draft, result.draft) : draft
+        setLookup({ loading: false, result: { ...result, draft: full, candidates: [] }, error: null })
+      }
+      catch {
+        setLookup({ loading: false, result: null, error: null })
+      }
+    }
+    applyDraft(full)
+  }
+
   function enrich(base: IBookFields) {
-    if (!library.enrichProvider || !base.title) {
+    // The library's own AI provider, or the home server's AI when the admin allowed it for this library.
+    if (!(library.enrichProvider || library.homeAiAllowed) || !base.title) {
       return
     }
     setAi('working')
@@ -231,10 +253,7 @@ export default function ReviewScreen() {
           {candidates.map(c => (
             <Pressable
               key={`${c.isbn13}-${c.title}-${c.publisher}`}
-              onPress={() => {
-                applyDraft(c)
-                setLookup({ loading: false, result: null, error: null })
-              }}
+              onPress={() => chooseCandidate(c)}
               className="min-h-16 flex-row items-center gap-3 rounded-2xl border-2 border-line bg-card p-3"
             >
               <BookCover title={c.title} uri={c.coverUrl} width={48} />

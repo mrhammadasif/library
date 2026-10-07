@@ -33,3 +33,20 @@ describe('bookForm', () => {
     expect(splitList('a, b;c\n , ')).toEqual(['a', 'b', 'c'])
   })
 })
+
+describe('fillBlanks', () => {
+  it('keeps what the chosen result has and fills the rest from the ISBN record', async () => {
+    const { fillBlanks } = await import('~/utils/BookForm')
+    const chosen = { ...emptyDraft(), title: 'Stories of the Prophets', authors: ['Ibn Kathir'], isbn13: '9781999802752', tags: ['stories'] }
+    const record = { ...emptyDraft(), title: 'Stories Of The Prophets (Full Record)', publisher: 'Darussalam', pages: 512, publishedYear: 2003, categories: ['Islamic'], tags: ['islamic', 'Stories'] }
+    expect(fillBlanks(chosen, record)).toMatchObject({
+      title: 'Stories of the Prophets',
+      authors: ['Ibn Kathir'],
+      publisher: 'Darussalam',
+      pages: 512,
+      publishedYear: 2003,
+      categories: ['Islamic'],
+      tags: ['stories', 'islamic'],
+    })
+  })
+})
