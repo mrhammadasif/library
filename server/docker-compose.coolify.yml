@@ -37,3 +37,6 @@ services:
       AI_KEYS_KEY: ${AI_KEYS_KEY}
       GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
       GOOGLE_BOOKS_DAILY_LIMIT: ${GOOGLE_BOOKS_DAILY_LIMIT:-900}
+      # Per-library daily allowances (Home AI libraries exempt); when spent, lookups/enrichment degrade gracefully.
+      LIBRARY_DAILY_GOOGLE_BOOKS: ${LIBRARY_DAILY_GOOGLE_BOOKS:-150}
+      LIBRARY_DAILY_WEB_SEARCHES: ${LIBRARY_DAILY_WEB_SEARCHES:-50}

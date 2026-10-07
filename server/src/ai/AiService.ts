@@ -11,6 +11,7 @@ import { fetchGoogleByIsbn, fetchOpenLibraryByIsbn, mergeDrafts, searchCandidate
 import { bookQuery, needsWebSearch, relevantResults, searchWeb } from '../../../shared/webSearch'
 import { requirePermission } from '../auth/Permissions'
 import { GoogleBooksBudget } from '../books-budget/GoogleBooksBudget'
+import { LibraryAllowance } from '../books-budget/LibraryAllowance'
 import { APP_CONFIG } from '../config/AppConfig'
 import { DomainError, notFound } from '../common/DomainError'
 import { InjectPrisma } from '../prisma/Prisma'
@@ -24,6 +25,7 @@ export class AiService {
     @InjectPrisma() private readonly prisma: PrismaClient,
     private readonly cipher: AiKeyCipher,
     private readonly googleBooks: GoogleBooksBudget,
+    private readonly allowance: LibraryAllowance,
     @Inject(APP_CONFIG) private readonly config: IAppConfig,
   ) {}
 
@@ -44,6 +46,10 @@ export class AiService {
     if (provider === 'openai_compatible' && !baseUrl?.startsWith('https://')) {
       throw new DomainError(400, 'https_required', 'The base URL must start with https://')
     }
+    // Prove the key (and model) work before storing them, so a typo shows up now rather than as a failed lookup later.
+    if (this.config.AI_KEY_CHECK && (key || existing?.model !== input.model || existing?.baseUrl !== baseUrl)) {
+      await this.checkProvider({ provider, model: input.model, baseUrl, apiKey: key ?? this.cipher.open(existing!) })
+    }
     const data = {
       model: input.model,
       baseUrl,
@@ -55,6 +61,37 @@ export class AiService {
     }
     else {
       await this.prisma.libraryAiProvider.create({ data: { libraryId, provider, ...data, ...this.cipher.seal(key!) } })
+    }
+  }
+
+  /** One tiny request with the given settings; provider errors become messages people can act on. */
+  private async checkProvider(config: IAiConfig): Promise<void> {
+    try {
+      await chatJson(config, {
+        system: 'Reply with ONLY this JSON: {"ok": true}',
+        user: 'ping',
+        schema: { type: 'object', properties: { ok: { type: 'boolean' } }, required: ['ok'] },
+        timeoutMs: 20_000,
+      })
+    }
+    catch (error) {
+      const status = Number((error as Error).message.match(/returned (\d{3})/)?.[1])
+      if (status === 401 || status === 403) {
+        throw new DomainError(400, 'invalid_key', 'That key didn\'t work. Check it was copied in full.')
+      }
+      if (status === 400 || status === 404) {
+        throw new DomainError(400, 'invalid_model', `The model "${config.model}" isn't available with this key.`)
+      }
+      if (status === 429) {
+        // Rate-limited means the key itself is fine.
+        return
+      }
+      if (!status && !(error instanceof SyntaxError) && !/no JSON object/.test((error as Error).message)) {
+        throw new DomainError(400, 'provider_unreachable', 'Couldn\'t reach it. Check the address and try again.')
+      }
+      if (status >= 500) {
+        throw new DomainError(400, 'provider_unreachable', 'The AI service had a problem. Try again in a minute.')
+      }
     }
   }
 
@@ -98,7 +135,8 @@ export class AiService {
     if (!library.enrichProvider && !home) {
       throw new DomainError(409, 'ai_not_configured', 'No AI is set up for tag suggestions')
     }
-    const web = this.config.SEARXNG_URL && needsWebSearch(draft)
+    // Web searches go out through the home connection, so they come from the library's daily allowance.
+    const web = this.config.SEARXNG_URL && needsWebSearch(draft) && await this.allowance.take(library, 'web_search')
       ? relevantResults(draft, await searchWeb(this.config.SEARXNG_URL, bookQuery(draft), { apiKey: this.config.SEARXNG_API_KEY }))
       : []
     const request = { system: ENRICH_SYSTEM, user: buildEnrichUser(draft, web), schema: ENRICH_SCHEMA, timeoutMs: 60_000 }
@@ -133,10 +171,10 @@ export class AiService {
     const isbn = identification.isbn ? normalizeIsbn(identification.isbn) : null
     const [byIsbn, byText] = await Promise.all([
       isbn
-        ? Promise.all([fetchOpenLibraryByIsbn(isbn.isbn13), fetchGoogleByIsbn(isbn.isbn13, this.googleBooks.access())])
+        ? Promise.all([fetchOpenLibraryByIsbn(isbn.isbn13), fetchGoogleByIsbn(isbn.isbn13, this.googleBooks.access(library))])
             .then(([ol, gb]) => mergeDrafts(ol, gb)).catch(() => null)
         : Promise.resolve(null),
-      searchCandidates(identification.title, identification.authors[0] ?? null, this.googleBooks.access()).catch(() => []),
+      searchCandidates(identification.title, identification.authors[0] ?? null, this.googleBooks.access(library)).catch(() => []),
     ])
     const candidates = byIsbn ? [{ ...byIsbn, isbn13: isbn!.isbn13, isbn10: isbn!.isbn10 }, ...byText] : byText
     return { identification, candidates: candidates.slice(0, 8) }

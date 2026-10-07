@@ -203,7 +203,8 @@ export default function BookScreen() {
       {b.description && (
         <View className="gap-2">
           <Text className="text-xl font-bold text-ink">What's it about?</Text>
-          <Text className="text-base leading-6 text-ink">{b.description}</Text>
+          {/* lineHeight as a style: NativeWind v5 rc turns `leading-*` (calc(var(--spacing) * n)) into a huge gap on devices. */}
+          <Text className="text-base text-ink" style={{ lineHeight: 24 }} testID="book-description">{b.description}</Text>
         </View>
       )}
 

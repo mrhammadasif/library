@@ -37,6 +37,7 @@ export async function createTestApp(env: Record<string, string> = {}): Promise<I
     COVERS_PUBLIC_URL: 'https://covers.test.local',
     HOME_AI_BASE_URL: 'http://home-ai.test/v1',
     HOME_AI_API_KEY: 'test-home-ai-key',
+    AI_KEY_CHECK: 'false',
     // Outbound HTTP is stubbed in tests; a key makes lookups try Google (without one, Google is skipped).
     GOOGLE_BOOKS_API_KEY: 'test-books-key',
     ...env,

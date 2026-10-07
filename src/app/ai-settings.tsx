@@ -1,9 +1,10 @@
 import type { AiProvider, IAiProviderConfig } from '~/models/ILibrary'
 import { useState } from 'react'
-import { Switch, Text, View } from 'react-native'
+import { Linking, Switch, Text, View } from 'react-native'
 import { Button } from '~/components/Button'
 import { Card } from '~/components/Card'
 import { Chip } from '~/components/Chip'
+import { Collapsible } from '~/components/Collapsible'
 import { ErrorState, Loading } from '~/components/EmptyState'
 import { Field } from '~/components/Field'
 import { Header } from '~/components/Header'
@@ -15,13 +16,30 @@ import { useMe, useSetHomeAi } from '~/hooks/Libraries'
 import { useCan, useCurrentLibrary } from '~/library/LibraryProvider'
 import { errorMessage } from '~/utils/Errors'
 
-const PROVIDERS: { key: AiProvider, name: string, defaultModel: string, blurb: string }[] = [
-  { key: 'openai', name: 'OpenAI', defaultModel: 'gpt-5-mini', blurb: 'Reads covers and suggests tags. Needs an API key from platform.openai.com.' },
-  { key: 'gemini', name: 'Google Gemini', defaultModel: 'gemini-2.5-flash', blurb: 'Reads covers and suggests tags. Needs an API key from aistudio.google.com.' },
-  { key: 'openai_compatible', name: 'Self-hosted', defaultModel: '', blurb: 'Any OpenAI-compatible endpoint over HTTPS (e.g. your own gateway).' },
-]
+interface IProviderInfo {
+  key: AiProvider
+  name: string
+  defaultModel: string
+  blurb: string
+  /** Where to create a key (shown as "Get a key"). */
+  keyUrl?: string
+}
 
-function ProviderForm({ libraryId, provider, existing }: { libraryId: string, provider: typeof PROVIDERS[number], existing?: IAiProviderConfig }) {
+// Gemini first: Google AI Studio keys are free, and flash-lite was the most accurate for the price in our comparison.
+const PROVIDERS: IProviderInfo[] = [
+  { key: 'gemini', name: 'Google Gemini', defaultModel: 'gemini-3.1-flash-lite', blurb: 'Free key from Google AI Studio. Fills in book details and reads covers.', keyUrl: 'https://aistudio.google.com/apikey' },
+  { key: 'openai', name: 'OpenAI', defaultModel: 'gpt-5-mini', blurb: 'Paid key from OpenAI. Fills in book details and reads covers.', keyUrl: 'https://platform.openai.com/api-keys' },
+]
+const SELF_HOSTED: IProviderInfo = { key: 'openai_compatible', name: 'Self-hosted', defaultModel: '', blurb: 'Any OpenAI-compatible endpoint over HTTPS (e.g. your own gateway).' }
+const ALL_PROVIDERS = [...PROVIDERS, SELF_HOSTED]
+
+function ProviderForm({ libraryId, provider, existing, onSaved }: {
+  libraryId: string
+  provider: IProviderInfo
+  existing?: IAiProviderConfig
+  /** After a successful save (the server has already tested the key). */
+  onSaved: (provider: AiProvider, supportsVision: boolean) => void
+}) {
   const save = useSetAiProvider()
   const remove = useDeleteAiProvider()
   const [editing, setEditing] = useState(false)
@@ -39,7 +57,12 @@ function ProviderForm({ libraryId, provider, existing }: { libraryId: string, pr
           <Text className={`text-sm font-semibold ${existing ? 'text-positive' : 'text-faint'}`}>{existing ? 'Set up' : 'Not set up'}</Text>
         </View>
         <Text className="text-sm text-muted">{existing ? `Model ${existing.model}${existing.baseUrl ? ` · ${existing.baseUrl}` : ''}` : provider.blurb}</Text>
-        <Button small variant="secondary" label={existing ? 'Change' : 'Set up'} onPress={() => setEditing(true)} />
+        <View className="flex-row gap-2">
+          {!existing && provider.keyUrl && (
+            <View className="flex-1"><Button small variant="ghost" icon="key" label="Get a key" onPress={() => Linking.openURL(provider.keyUrl!)} /></View>
+          )}
+          <View className="flex-1"><Button small variant="secondary" label={existing ? 'Change' : 'Add my key'} onPress={() => setEditing(true)} /></View>
+        </View>
       </Card>
     )
   }
@@ -57,9 +80,14 @@ function ProviderForm({ libraryId, provider, existing }: { libraryId: string, pr
         onChangeText={setApiKey}
         secureTextEntry
         autoCapitalize="none"
-        placeholder={existing?.hasKey ? 'Saved (leave blank to keep)' : ''}
-        hint="Stored encrypted on the server; the app never shows it again."
+        placeholder={existing?.hasKey ? 'Saved (leave blank to keep)' : 'Paste your key'}
+        hint="We test it, then store it encrypted. The app never shows it again."
       />
+      {provider.keyUrl && !existing && (
+        <Text className="text-sm text-primary" onPress={() => Linking.openURL(provider.keyUrl!)} accessibilityRole="link">
+          🔑 Don't have one? Get a key
+        </Text>
+      )}
       {compatible && (
         <View className="flex-row items-center justify-between">
           <Text className="flex-1 text-sm text-ink">The model can read images (cover recognition)</Text>
@@ -77,7 +105,7 @@ function ProviderForm({ libraryId, provider, existing }: { libraryId: string, pr
         <View className="flex-1">
           <Button
             small
-            label="Save"
+            label={save.isPending ? 'Checking the key…' : 'Save'}
             loading={save.isPending}
             disabled={!model.trim() || (!existing?.hasKey && !apiKey.trim()) || (compatible && !baseUrl.startsWith('https://'))}
             onPress={() => save.mutate(
@@ -85,6 +113,7 @@ function ProviderForm({ libraryId, provider, existing }: { libraryId: string, pr
               { onSuccess: () => {
                 setApiKey('')
                 setEditing(false)
+                onSaved(provider.key, compatible ? vision : true)
               } },
             )}
           />
@@ -94,7 +123,10 @@ function ProviderForm({ libraryId, provider, existing }: { libraryId: string, pr
   )
 }
 
-/** Per-library AI: keys (stored in Vault), which provider suggests metadata, which reads cover photos. */
+/**
+ * Per-library AI: people bring their own key (encrypted on the server, tested on save); which provider fills in book
+ * details and which reads cover photos. Home AI (the server's own key) only appears for libraries the admin allowed.
+ */
 export default function AiSettingsScreen() {
   const { library } = useCurrentLibrary()
   const providers = useAiProviders(library.id)
@@ -104,10 +136,19 @@ export default function AiSettingsScreen() {
   const canManage = useCan('ai.manage')
   const configured = providers.data ?? []
   const visionCapable = configured.filter(p => p.supportsVision)
-  const nameOf = (key: AiProvider) => PROVIDERS.find(p => p.key === key)!.name
+  const nameOf = (key: AiProvider) => ALL_PROVIDERS.find(p => p.key === key)!.name
 
   function setUsage(enrich: AiProvider | null, vision: AiProvider | null) {
     usage.mutate({ libraryId: library.id, enrich, vision })
+  }
+
+  // A newly added key should just work: switch it on for whatever isn't using anything yet (Home AI stays if allowed).
+  function startUsing(provider: AiProvider, supportsVision: boolean) {
+    const enrich = library.enrichProvider ?? (library.homeAiAllowed ? null : provider)
+    const vision = library.visionProvider ?? (supportsVision ? provider : null)
+    if (enrich !== library.enrichProvider || vision !== library.visionProvider) {
+      setUsage(enrich, vision)
+    }
   }
 
   return (
@@ -126,6 +167,14 @@ export default function AiSettingsScreen() {
             onValueChange={allowed => homeAi.mutate({ libraryId: library.id, allowed })}
             trackColor={{ true: Colors.primary }}
           />
+        </Card>
+      )}
+      {providers.data && canManage && configured.length === 0 && !library.homeAiAllowed && (
+        <Card className="gap-2 py-4">
+          <Text className="text-lg font-bold text-ink">✨ Let AI fill in the details</Text>
+          <Text className="text-base text-muted">
+            Add your own AI key and the app will suggest tags, categories and a description for each book, and recognise books from a cover photo. A Google Gemini key is free.
+          </Text>
         </Card>
       )}
       {providers.data && canManage && (
@@ -154,8 +203,11 @@ export default function AiSettingsScreen() {
           <View className="gap-3">
             <SectionHeader title="Providers" />
             {PROVIDERS.map(p => (
-              <ProviderForm key={p.key} libraryId={library.id} provider={p} existing={configured.find(c => c.provider === p.key)} />
+              <ProviderForm key={p.key} libraryId={library.id} provider={p} existing={configured.find(c => c.provider === p.key)} onSaved={startUsing} />
             ))}
+            <Collapsible title="Advanced" initiallyOpen={configured.some(c => c.provider === SELF_HOSTED.key)}>
+              <ProviderForm libraryId={library.id} provider={SELF_HOSTED} existing={configured.find(c => c.provider === SELF_HOSTED.key)} onSaved={startUsing} />
+            </Collapsible>
           </View>
         </>
       )}

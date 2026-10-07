@@ -205,7 +205,7 @@ model Library {
   createdBy      String?     @map("created_by") @db.Uuid
   enrichProvider AiProvider? @map("enrich_provider")
   visionProvider AiProvider? @map("vision_provider")
-  /// Home Ollama allowed for this library; only the server admin can set it.
+  /// Home AI (OmniRoute) allowed for this library; only the server admin can set it. Also exempts it from daily allowances.
   homeAiAllowed  Boolean     @default(false) @map("home_ai_allowed")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
@@ -220,6 +220,7 @@ model Library {
   audits      Audit[]
   auditItems  AuditItem[]
   aiProviders LibraryAiProvider[]
+  dailyUsage  LibraryDailyUsage[]
 
   @@map("libraries")
 }
@@ -448,4 +449,17 @@ model GoogleBooksUsage {
   count Int      @default(0)
 
   @@map("google_books_usage")
+}
+
+/// Per-library daily allowances (Pacific day) for shared outbound services: kind = google_books | web_search.
+model LibraryDailyUsage {
+  libraryId String   @map("library_id") @db.Uuid
+  day       DateTime @db.Date
+  kind      String
+  count     Int      @default(0)
+
+  library Library @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  @@id([libraryId, day, kind])
+  @@map("library_daily_usage")
 }

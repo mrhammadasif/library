@@ -1,0 +1,88 @@
+# A long description on the book page wraps with normal line spacing (NativeWind `leading-*` used to blow it up).
+# TEST DATA ONLY: creates "Maestro Text Library" and deletes it at the end.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+    permissions:
+      camera: allow
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Welcome|Hi .*"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Welcome"
+    file: flows/delete-library.yaml
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro Text Library"
+- hideKeyboard
+- tapOn: "Create library"
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+- tapOn: "Add a bookcase"
+- tapOn: "Add a bookcase"
+- tapOn:
+    id: "bookcase-name"
+- inputText: "Maestro Case"
+- hideKeyboard
+- tapOn: "Add"
+- extendedWaitUntil:
+    visible: ".*Bookcase added.*"
+    timeout: 15000
+- tapOn: "Top shelf"
+- extendedWaitUntil:
+    visible: "0 books"
+    timeout: 10000
+- tapOn: "Top shelf"
+- tapOn: "Add a book here"
+- tapOn: "Type it in"
+- tapOn:
+    id: "book-title"
+- inputText: "Maestro Grammar Book"
+- hideKeyboard
+- scrollUntilVisible:
+    element: "More details"
+    direction: DOWN
+- tapOn: "More details"
+- scrollUntilVisible:
+    element:
+      id: "book-description-input"
+    direction: DOWN
+- tapOn:
+    id: "book-description-input"
+- inputText: "Primary School English Grammar and Composition and Middle School English Grammar and Composition, a complete course for young learners with exercises, examples and revision tests in every chapter."
+- hideKeyboard
+- scrollUntilVisible:
+    element: "Put it on the shelf"
+    direction: DOWN
+- tapOn: "Put it on the shelf"
+- extendedWaitUntil:
+    visible: ".*Added to Maestro Case.*"
+    timeout: 15000
+
+# ── Open the book and look at the description ────────────────────────────────
+- launchApp
+- extendedWaitUntil:
+    visible: "Hi .*"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Maestro Grammar Book"
+    direction: DOWN
+- tapOn: "Maestro Grammar Book"
+- scrollUntilVisible:
+    element:
+      id: "book-description"
+    direction: DOWN
+- takeScreenshot: description-01
+
+# ── Clean up ─────────────────────────────────────────────────────────────────
+- launchApp
+- extendedWaitUntil:
+    visible: "Hi .*"
+    timeout: 20000
+- runFlow: flows/delete-library.yaml

@@ -1,14 +1,12 @@
 import type { IGoogleBooks } from '../../../shared/metadata'
 import type { IAppConfig } from '../config/AppConfig'
+import type { IAllowanceScope } from './LibraryAllowance'
 import type { PrismaClient } from '../generated/prisma/client'
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { APP_CONFIG } from '../config/AppConfig'
 import { InjectPrisma } from '../prisma/Prisma'
-
-/** Google's Books quota resets at midnight Pacific time, so the budget counts Pacific days ("2026-10-07"). */
-export function pacificDay(now = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
-}
+import { LibraryAllowance } from './LibraryAllowance'
+import { pacificDay } from './PacificDay'
 
 /**
  * Server-wide daily cap on Google Books requests (default 900, under the key's 1,000/day). The counter lives in
@@ -23,6 +21,7 @@ export class GoogleBooksBudget {
   constructor(
     @InjectPrisma() private readonly prisma: PrismaClient,
     @Inject(APP_CONFIG) private readonly config: IAppConfig,
+    private readonly allowance: LibraryAllowance,
   ) {}
 
   /** Reserves one request; false once today's budget is used up. */
@@ -47,9 +46,12 @@ export class GoogleBooksBudget {
     return false
   }
 
-  /** Google access for the shared lookup code, or null when no key is configured. */
-  access(): IGoogleBooks | null {
+  /**
+   * Google access for the shared lookup code, or null when no key is configured. Each request needs a unit of the
+   * library's own daily allowance and of the server-wide budget.
+   */
+  access(scope: IAllowanceScope): IGoogleBooks | null {
     const apiKey = this.config.GOOGLE_BOOKS_API_KEY
-    return apiKey ? { apiKey, take: () => this.take() } : null
+    return apiKey ? { apiKey, take: async () => await this.allowance.take(scope, 'google_books') && await this.take() } : null
   }
 }

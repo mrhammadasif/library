@@ -1,0 +1,47 @@
+# Smart helpers for a library without Home AI: the "bring your own key" intro, Gemini first with "Get a key".
+# TEST DATA ONLY: creates "Maestro AI Library" and deletes it at the end.
+appId: com.nitroxis.library
+tags:
+  - e2e
+---
+- launchApp:
+    clearState: true
+- runFlow: flows/sign-in.yaml
+- extendedWaitUntil:
+    visible: "Welcome|Hi .*"
+    timeout: 20000
+- runFlow:
+    when:
+      notVisible: "Welcome"
+    file: flows/delete-library.yaml
+- tapOn:
+    id: "welcome-library-name"
+- inputText: "Maestro AI Library"
+- hideKeyboard
+- tapOn: "Create library"
+- extendedWaitUntil:
+    visible: ".*set up your library.*"
+    timeout: 20000
+- tapOn: "Settings"
+- tapOn: "Smart helpers.*"
+- extendedWaitUntil:
+    visible: ".*Let AI fill in the details.*"
+    timeout: 10000
+- assertVisible: "Google Gemini"
+- assertVisible: "Get a key"
+- assertVisible: "Advanced"
+- takeScreenshot: ai-01-intro
+- scrollUntilVisible:
+    element: "Add my key"
+    direction: DOWN
+- tapOn:
+    text: "Add my key"
+    index: 0
+- extendedWaitUntil:
+    visible: ".*Don't have one\\? Get a key.*"
+    timeout: 5000
+- assertVisible: "gemini-3.1-flash-lite"
+- takeScreenshot: ai-02-gemini-form
+- back
+- back
+- runFlow: flows/delete-library.yaml

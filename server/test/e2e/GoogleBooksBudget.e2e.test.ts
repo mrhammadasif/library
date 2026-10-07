@@ -1,7 +1,8 @@
 // TEST DATA ONLY. The Google Books daily cap: atomic, per Pacific day, and lookups fall back to Open Library when spent.
 import type { ITestApp } from '../setup/TestApp'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GoogleBooksBudget, pacificDay } from '../../src/books-budget/GoogleBooksBudget'
+import { GoogleBooksBudget } from '../../src/books-budget/GoogleBooksBudget'
+import { pacificDay } from '../../src/books-budget/PacificDay'
 import { addMember, createLibrary, signUp } from '../setup/Fixtures'
 import { createTestApp } from '../setup/TestApp'
 

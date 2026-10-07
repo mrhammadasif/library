@@ -63,6 +63,12 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
   (`GOOGLE_BOOKS_DAILY_LIMIT`, under the key's 1,000). When spent, or with no key, lookups use Open Library only.
   Shared fetchers take `IGoogleBooks { apiKey, take }` or null. Tags/categories are also derived from subject headings
   (`suggestTags`, `categoryPath`, `subjectCategories` in shared/metadata.ts) so they fill in without AI.
+- **Public use (bring your own key):** strangers never touch the owner's keys. Home AI is off unless the admin enables it
+  per library; everyone else adds their own Gemini/OpenAI key in Smart helpers (tested with a tiny request on save:
+  `AI_KEY_CHECK`, mapped to `invalid_key` / `invalid_model` / `provider_unreachable`; a new key is switched on
+  automatically). Shared services have per-library daily allowances in `library_daily_usage` (`LibraryAllowance`,
+  Pacific day, atomic like the Google budget): `LIBRARY_DAILY_GOOGLE_BOOKS` (150) and `LIBRARY_DAILY_WEB_SEARCHES` (50).
+  Home AI libraries are exempt. When an allowance is spent, lookups use Open Library only and AI runs without web results.
 - Web search during AI enrichment: when the draft still has gaps (`needsWebSearch`), `AiService.enrich` queries the
   home **SearXNG** (`SEARXNG_URL` = `https://searxng.home.nitroxis.com`, locked: `SEARXNG_API_KEY` sent as `X-API-Key`;
   it has no internal route to the API) and keeps only the ≤3 results whose text matches the title (`relevantResults`),
@@ -124,7 +130,8 @@ removed before ever being deployed (2026-10-06). Sibling of `~/projects/financy`
 - Lint allows apostrophes in JSX text (`react/no-unescaped-entities` forbids only `>` and `}`).
 
 ## Gotchas (inherited from financy)
-- NativeWind v5 rc: `className` only on core RN components (use `SafeArea`), `/NN` opacity modifiers don't render (use hex alpha).
+- NativeWind v5 rc: `className` only on core RN components (use `SafeArea`), `/NN` opacity modifiers don't render (use hex alpha),
+  and `leading-*` line heights blow up to huge gaps on device: set `style={{ lineHeight: n }}` instead.
 - `lightningcss` pinned to 1.30.1 via `overrides`. `app.config.js` stays plain JS (older eas-cli + TS 6).
 - `deno.json` lives in `supabase/`, not `supabase/functions/`.
 - Cover uploads use a fresh path per upload (`{library}/{book}-{ts}.jpg`) so cached images refresh.

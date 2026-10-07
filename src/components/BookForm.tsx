@@ -34,7 +34,7 @@ export function BookDetailsForm({ fields, onChange, tagSuggestions }: { fields: 
         suggestions={tagSuggestions}
       />
       <TagInput label="Categories" values={fields.categories} onChange={v => onChange('categories', v)} placeholder="e.g. History" />
-      <Field label="What's it about?" value={fields.description ?? ''} onChangeText={v => onChange('description', v)} multiline />
+      <Field label="What's it about?" value={fields.description ?? ''} onChangeText={v => onChange('description', v)} multiline testID="book-description-input" />
       <View className="flex-row gap-3">
         <View className="flex-1">
           <Field label="ISBN" value={fields.isbn13 ?? ''} onChangeText={v => onChange('isbn13', v.replace(/\D/g, ''))} keyboardType="number-pad" maxLength={13} />
